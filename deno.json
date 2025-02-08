@@ -1,7 +1,0 @@
-{
-  "lock": "./Server/deno.lock",
-  "importMap": "./import_map.json",
-  "tasks": {
-    "start": "deno run --unstable --allow-net --lock=Server/deno.lock Server/server.ts"
-  }
-}
