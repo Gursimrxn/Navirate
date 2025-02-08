@@ -56,7 +56,6 @@ export default function IndoorNavigation() {
     return (bearing + 360) % 360;
   };
 
-  // Updated haversineDistance function
   const haversineDistance = (lat1: number, lng1: number, lat2: number, lng2: number) => {
     const R = 6371000;
     const dLat = toRad(lat2 - lat1);
@@ -129,17 +128,17 @@ export default function IndoorNavigation() {
     return merged;
   };
 
-  // Map initialization - update these settings
+  // Map initialization
   useEffect(() => {
     if (!mapContainer.current) return;
 
     map.current = new mapboxgl.Map({
       container: mapContainer.current,
-      style: "mapbox://styles/mapbox/light-v11",
+      style: "mapbox://styles/mapbox/streets-v11",
       center: [76.660575, 30.516264],
-      zoom: 18,
-      pitch: 45,
-      bearing: 0,
+      zoom: 10,
+      pitch: 0,
+      bearing: 45,
       antialias: true,
     });
 
@@ -152,13 +151,6 @@ export default function IndoorNavigation() {
         map.current?.addSource('walls', { type: 'geojson', data });
         addWallLayers();
         fitMapToBounds();
-        
-        // Add smooth bearing animation
-        map.current?.easeTo({
-          bearing: 45,
-          duration: 1000,
-          easing: (t) => t
-        });
       } catch (err) {
         console.error('Error loading walls data:', err);
       }
@@ -181,7 +173,7 @@ export default function IndoorNavigation() {
         id: 'wallsFill',
         type: 'fill',
         source: 'walls',
-        paint: { 'fill-color': '#505552', 'fill-opacity': 1 },
+        paint: { 'fill-color': '#CCE7D4', 'fill-opacity': 1 },
         filter: ['==', ['get', 'floor'], currentFloor],
       });
     }
