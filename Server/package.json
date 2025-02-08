@@ -1,0 +1,11 @@
+{
+    "dependencies": {
+      "cors": "^2.8.5",
+      "ngraph.graph": "^20.0.1",
+      "ngraph.path": "^1.5.0"
+    },
+    "devDependencies": {
+      "@types/cors": "^2.8.17"
+    }
+  }
+  

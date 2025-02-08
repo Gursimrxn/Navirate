@@ -1,0 +1,6 @@
+{
+  "imports": {
+    "ngraph.graph": "npm:ngraph.graph@^20.0.1",
+    "ngraph.path": "npm:ngraph.path@^1.5.0"
+  }
+}
