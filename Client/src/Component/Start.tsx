@@ -44,9 +44,9 @@ export default function Navirate() {
         </div>
       </div>
       <div className="relative z-10 flex flex-col items-center text-center p-6 bg-transparent shadow-lg rounded-lg">
-        <h1 className="text-4xl font-bold">Let’s Guide <br /> You're Way In!</h1>
+        <h1 className="text-4xl font-bold">Let's Guide <br /> You're Way In!</h1>
       </div>
-      <div className="relative z-10 flex flex-col items-center text-center p-4 bg-white shadow-lg rounded-lg w-full max-w-sm absolute bottom-4">
+      <div className="relative z-10 flex flex-col items-center text-center p-4 bg-white shadow-lg rounded-lg w-full max-w-sm bottom-4">
         <button
           className="w-full py-2 px-4 bg-green-600 text-white rounded-lg shadow"
           onClick={getLocation}
