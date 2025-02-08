@@ -6,7 +6,7 @@ function App() {
         <div>
             <IndoorNavigation />
             <div className="fixed z-20 top-10 w-full flex justify-center">
-                <Navbar />
+              <Navbar />
             </div>
         </div>
     );
