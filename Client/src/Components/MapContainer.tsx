@@ -134,7 +134,7 @@ export default function IndoorNavigation() {
 
     map.current = new mapboxgl.Map({
       container: mapContainer.current,
-      style: "mapbox://styles/ceiia/cl8a9clfo00n314pmwmsvha8i",
+      style: "mapbox://styles/mapbox/streets-v11",
       center: [76.660575, 30.516264],
       zoom: 10,
       pitch: 0,
