@@ -60,7 +60,7 @@ export const Navbar = () => {
                 initial={{ scale: 0.95 }}
                 animate={{ scale: 1 }}
                 transition={{ duration: 0.2 }}
-                className="flex justify-around items-center bg-white rounded-full gap-10 px-3 p-2"
+                className="flex justify-around items-center bg-white select-none rounded-full gap-10 px-3 p-2"
             >
                 <div className="flex items-center gap-2">
                     {navItems.map((item) => (
