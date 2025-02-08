@@ -8,7 +8,7 @@ const SplashScreen = () => {
   useEffect(() => {
     // After 2 seconds, navigate to the login page
     const timer = setTimeout(() => {
-      navigate("/login"); // Adjust the path based on your route configuration
+      navigate("/Login"); // Adjust the path based on your route configuration
     }, 2000);
 
     // Clear the timer on component unmount
