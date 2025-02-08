@@ -1,11 +1,19 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
 const Auth = () => {
   const [isRegister, setIsRegister] = useState(false);
   const [formData, setFormData] = useState({ id: "", password: "" });
 
-  const handleChange = (e) => {
+
+  interface ChangeEvent {
+    target: {
+      name: string;
+      value: string;
+    };
+  }
+
+  const handleChange = (e: ChangeEvent) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 

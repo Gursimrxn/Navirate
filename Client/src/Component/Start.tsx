@@ -1,7 +1,6 @@
 import { useState } from "react";
 
 export default function Navirate() {
-  const [locationAccess, setLocationAccess] = useState(false);
   const [showEndOptions, setShowEndOptions] = useState(false);
   const [selectedEnd, setSelectedEnd] = useState("📍 Choose Destination");
   const [currentLocation, setCurrentLocation] = useState("📍 Choose Start Point");
