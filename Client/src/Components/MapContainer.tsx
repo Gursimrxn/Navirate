@@ -362,6 +362,42 @@ export default function IndoorNavigation() {
 
   return (
     <div className="relative top-0 w-full h-screen">
+      {/* Add form controls for start and end points */}
+      <div className="absolute z-10 top-4 left-4 bg-white p-4 rounded-lg shadow-md">
+        <input
+          type="text"
+          placeholder="Start ID"
+          value={startId}
+          onChange={(e) => setStartId(e.target.value)}
+          className="mb-2 p-2 border rounded"
+        />
+        <input
+          type="text"
+          placeholder="End ID"
+          value={endId}
+          onChange={(e) => setEndId(e.target.value)}
+          className="mb-2 p-2 border rounded"
+        />
+        <button
+          onClick={calculateRoute}
+          className="p-2 bg-blue-500 text-white rounded"
+          disabled={isAnimating}
+        >
+          Calculate Route
+        </button>
+      </div>
+
+      {/* Display instructions if available */}
+      {instructions.length > 0 && (
+        <div className="absolute z-10 top-4 right-4 bg-white p-4 rounded-lg shadow-md max-w-md">
+          <h3 className="font-bold mb-2">Navigation Instructions:</h3>
+          <ol className="list-decimal pl-4">
+            {instructions.map((instruction, index) => (
+              <li key={index}>{instruction}</li>
+            ))}
+          </ol>
+        </div>
+      )}
       
       <FloorSwitcher currentFloor={currentFloor} setCurrentFloor={setCurrentFloor} />
       
