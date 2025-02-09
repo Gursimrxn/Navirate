@@ -1,13 +1,13 @@
 import IndoorNavigation from "./Components/MapContainer";
 import { Navbar } from "./Components/Navbar";
+import { Dock } from "./Components/Dock";
 
 function App() {
     return (
         <div>
             <IndoorNavigation />
-            <div className="fixed z-20 top-10 w-full flex justify-center">
-              <Navbar />
-            </div>
+            <Navbar />
+            <Dock />
         </div>
     );
 }
