@@ -31,7 +31,8 @@ class NavigationServiceImpl implements NavigationService {
 
   async calculateRoute(startId: string | undefined, endId: string) {
     try {
-      const response = await fetch(`${BASE_URL}/path?start=5&end=${endId}`);
+        const response = await fetch(`${BASE_URL}/path?start=5&end=${endId}`);
+        console.log(startId);
       if (!response.ok) {
         throw new Error("Failed to calculate route");
       }
