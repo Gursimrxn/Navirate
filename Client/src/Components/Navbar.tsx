@@ -1,5 +1,6 @@
+import React from "react";
 import { motion } from "framer-motion";
-import { navigationService } from "../services/navigationService";
+import { navigationService } from "../services/navigationService.ts";
 
 export const Navbar = () => {
     const navItems = [
