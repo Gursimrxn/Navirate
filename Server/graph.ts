@@ -1,6 +1,6 @@
-import createGraph from 'ngraph.graph';
-import * as path from 'ngraph.path';
-let graph = createGraph();
+import createGraph from "npm:ngraph.graph";
+import * as path from 'npm:ngraph.path';
+const graph = createGraph();
 const nodeData = {
   5:  { x: 76.66057423511904, y: 30.516562768022, floor: "G" },
   6:  { x: 76.66057391235302, y: 30.51655136768173, floor: "G" },
@@ -68,7 +68,7 @@ connections.forEach(([source, target]) => {
   graph.addLink(s, t);
   graph.addLink(t, s);
 });
-let pathFinder = path.aStar(graph, {
+const pathFinder = path.aStar(graph, {
   distance(fromNode, toNode) {
     if (!fromNode.data || !toNode.data) return 0;
     const dx = fromNode.data.x - toNode.data.x;
@@ -164,4 +164,23 @@ export function findPath(startNodeId: string, endNodeId: string, currentFloor?: 
     }
     return completePath;
   }
+}
+export function findEmergencyPath(startNodeId: string) {
+  const startNode = graph.getNode(startNodeId);
+  if (!startNode?.data) {
+    throw new Error(`Node not found: ${startNodeId}`);
+  }
+  const startFloor = startNode.data.floor;
+  const liftId = "36";
+  const pathToLift = pathFinder.find(startNodeId, liftId);
+  if (!pathToLift || pathToLift.length === 0) {
+    throw new Error(`No emergency path found from ${startNodeId}`);
+  }
+  const sortedPathToLift = pathToLift.reverse();
+  const leg1 = sortedPathToLift.map(n => ({
+    id: n.id,
+    name: getNodeName(n.id),
+    coordinates: { ...n.data, floor: String(n.data.floor) }
+  }));
+  return leg1;
 }
