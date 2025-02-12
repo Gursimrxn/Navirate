@@ -1,4 +1,4 @@
-type NavigationCallback = (startId: string, endId: string) => void;
+type NavigationCallback = (startId: string, endId: string | { path: any[], type: string }) => void;
 
 class NavigationEventService {
     private listeners: NavigationCallback[] = [];
@@ -10,8 +10,8 @@ class NavigationEventService {
         };
     }
 
-    emit(startId: string, endId: string) {
-        this.listeners.forEach(callback => callback(startId, endId));
+    emit(startId: string, endIdOrPath: string | { path: any[], type: string }) {
+        this.listeners.forEach(callback => callback(startId, endIdOrPath));
     }
 }
 

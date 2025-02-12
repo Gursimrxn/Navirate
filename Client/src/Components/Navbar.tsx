@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { navigationEvents } from "../services/eventService";
+import { navigationService } from "../services/navigationService";
 
 export const Navbar = () => {
     const navItems = [
@@ -111,12 +111,16 @@ export const Navbar = () => {
 
     const handleNavigationRequest = async (destination: string) => {
         try {
-            // Assuming we have a current location ID or getting it from somewhere
-            const currentLocationId = "5"; // Replace with actual current location
-            const destinationId = getDestinationId(destination);
+            const currentLocationId = "32"; // Replace with actual current location
 
-            // Emit the navigation event
-            navigationEvents.emit(currentLocationId, destinationId);
+            if (destination === "Emergency") {
+                await navigationService.calculateEmergencyRoute(currentLocationId);
+            } else {
+                const destinationId = getDestinationId(destination);
+                if (destinationId) {
+                    await navigationService.calculateRoute(currentLocationId, destinationId);
+                }
+            }
         } catch (error) {
             console.error("Navigation request failed:", error);
         }
@@ -166,7 +170,15 @@ export const Navbar = () => {
                             </motion.div>
                         ))}
                     </div>
-                    <motion.svg
+                    <motion.svg 
+                        onClick={async () => {
+                            try {
+                                // Call handleNavigationRequest with "emergency" type
+                                await handleNavigationRequest("Emergency");
+                            } catch (error) {
+                                console.error("Emergency navigation error:", error);
+                            }
+                        }}
                         whileHover={{ scale: 1.05 }}
                         whileTap={{ scale: 0.95 }}
                         transition={{ duration: 0.1 }}

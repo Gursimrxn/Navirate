@@ -5,7 +5,7 @@ import { FloorSwitcher } from './FloorSwitcher';
 import { navigationEvents } from '../services/eventService';
 import { navigationService } from '../services/navigationService';
 
-mapboxgl.accessToken = "pk.eyJ1IjoiY2VpaWEiLCJhIjoiY2lsMTE0aG9lMmRzenVnbTN0MWNsNW05MyJ9.XjKQqu9fpea2zovIcy5uZg";
+mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN;
 
 interface PathPoint {
   coordinates: {
@@ -38,6 +38,7 @@ export default function IndoorNavigation() {
   const latestPath = useRef<PathPoint[]>([]);
   const buildingData = useRef<BuildingData | null>(null);
   const [isAnimating, setIsAnimating] = useState(false);
+  const [isEmergency, setIsEmergency] = useState(false);
 
   // Helper functions
   const toRad = (deg: number) => (deg * Math.PI) / 180;
@@ -137,17 +138,17 @@ export default function IndoorNavigation() {
 
     map.current = new mapboxgl.Map({
       container: mapContainer.current,
-      style: "mapbox://styles/mapbox/streets-v11",
+      style: "mapbox://styles/mapbox/streets-v12",
       center: [76.66067, 30.51638], // Updated coordinates
-      zoom: 11, // Increased zoom level
-      pitch: 20,
-      bearing: 145,
+      zoom: 13, // Increased zoom level
+      // pitch: 20,
+      // bearing: 145,
       antialias: true,
     });
 
     map.current.on('load', async () => {
       try {
-        const response = await fetch(`${window.location.origin}/test3.geojson`);
+        const response = await fetch(`/test3.geojson`);
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
@@ -178,14 +179,46 @@ export default function IndoorNavigation() {
 
   // Update floor layers when floor changes
   useEffect(() => {
+    if (!map.current?.isStyleLoaded()) return;
     updateFloorFilter();
-  }, [currentFloor]);
+  }, [currentFloor]); // Only depend on currentFloor
 
   useEffect(() => {
-    const unsubscribe = navigationEvents.subscribe((start, end) => {
+    const unsubscribe = navigationEvents.subscribe((start, endIdOrPath) => {
+      if (start === startId && (
+        (typeof endIdOrPath === 'string' && endIdOrPath === endId) ||
+        (typeof endIdOrPath === 'object' && isEmergency)
+      )) {
+        return; // Prevent duplicate calculations
+      }
+
       setStartId(start);
-      setEndId(end);
-      calculateRoute();
+      
+      if (typeof endIdOrPath === 'object' && endIdOrPath.type === 'emergency') {
+        setIsEmergency(true);
+        if (endIdOrPath.path) {
+          latestPath.current = endIdOrPath.path;
+          setInstructions([
+            "🚨 EMERGENCY EVACUATION ROUTE 🚨",
+            ...computeTurnByTurnInstructions(endIdOrPath.path)
+          ]);
+          updateRouteColors();
+          if (map.current && endIdOrPath.path.length > 0) {
+            const bounds = new mapboxgl.LngLatBounds();
+            endIdOrPath.path.forEach((point: PathPoint) => {
+              bounds.extend([point.coordinates.x, point.coordinates.y]);
+            });
+            map.current.fitBounds(bounds, { padding: 50 });
+          }
+        }
+      } else {
+        setIsEmergency(false);
+        setEndId(endIdOrPath as string);
+        // Only calculate route if we have both IDs
+        if (start && endIdOrPath) {
+          calculateRoute();
+        }
+      }
     });
 
     return () => {
@@ -194,7 +227,7 @@ export default function IndoorNavigation() {
         cancelAnimationFrame(animationRef.current);
       }
     };
-  }, []);
+  }, []); // Empty dependency array since we handle updates inside the subscription
 
   const addWallLayers = () => {
     if (!map.current?.getLayer('wallsFill')) {
@@ -225,7 +258,19 @@ export default function IndoorNavigation() {
         feature.geometry.coordinates[0].forEach(coord => bounds.extend(coord as [number, number]));
       }
     });
-    map.current?.fitBounds(bounds);
+    map.current?.fitBounds(bounds, {
+      padding: { top: 200, bottom: 200 },
+      bearing: 182,
+      pitch: 45,
+      duration: 1000
+    });
+    if (latestPath.current.length >= 2) {
+      const first = latestPath.current[0].coordinates;
+      const second = latestPath.current[1].coordinates;
+      // Compute bearing based on the first two points of the path
+      const newBearing = getBearing(first.y, first.x, second.y, second.x);
+      map.current?.rotateTo(newBearing, { duration: 1000 });
+    }
   };
 
   const updateFloorFilter = () => {
@@ -247,7 +292,7 @@ export default function IndoorNavigation() {
   };
 
   const updateRouteColors = () => {
-    if (!latestPath.current.length) return;
+    if (!latestPath.current.length || !map.current?.getSource('route')) return;
 
     const features = latestPath.current.slice(0, -1).map((p1, i) => {
       const p2 = latestPath.current[i + 1];
@@ -262,7 +307,7 @@ export default function IndoorNavigation() {
           ],
         },
         properties: {
-          color: isCurrent ? '#30A953' : 'gray',
+          color: isEmergency ? '#FF0000' : (isCurrent ? '#30A953' : 'gray'),
           opacity: isCurrent ? 1 : 0.3,
         },
       } as GeoJSON.Feature<GeoJSON.LineString>;
@@ -275,10 +320,13 @@ export default function IndoorNavigation() {
   };
 
   const calculateRoute = async () => {
-    if (!endId) {
+    if (!startId || !endId) {
       console.error('Start or end ID missing');
       return;
     }
+
+    // Prevent recalculation if already calculating
+    if (isAnimating) return;
 
     // Stop any ongoing animation
     if (isAnimating && animationRef.current) {
@@ -296,13 +344,16 @@ export default function IndoorNavigation() {
       setInstructions(computeTurnByTurnInstructions(result.path));
       setCurrentFloor(result.path[0].coordinates.floor);
 
-      // Center map on the path
+      // Center map on the path with padding
       if (map.current) {
         const bounds = new mapboxgl.LngLatBounds();
         result.path.forEach((point: PathPoint) => {
           bounds.extend([point.coordinates.x, point.coordinates.y]);
         });
-        map.current.fitBounds(bounds, { padding: 50 });
+        map.current.fitBounds(bounds, {
+          padding: { top: 50, bottom: 50, left: 200, right: 200 },
+          duration: 1000
+        });
       }
 
       // Setup route source if it doesn't exist
@@ -325,7 +376,7 @@ export default function IndoorNavigation() {
           },
           paint: {
             'line-color': ['get', 'color'],
-            'line-width': 3,
+            'line-width': 5,
             'line-opacity': ['get', 'opacity']
           }
         });
@@ -411,6 +462,39 @@ export default function IndoorNavigation() {
 
     setIsAnimating(true);
     animationRef.current = requestAnimationFrame(animate);
+  };
+
+  const handleEmergencyNavigation = async () => {
+    setIsEmergency(true);
+    try {
+      const result = await navigationService.calculateEmergencyRoute(startId);
+      if (!result?.path?.length) {
+        throw new Error('No valid emergency path found');
+      }
+
+      latestPath.current = result.path;
+      setInstructions([
+        "🚨 EMERGENCY EVACUATION ROUTE 🚨",
+        ...computeTurnByTurnInstructions(result.path)
+      ]);
+      setCurrentFloor(result.path[0].coordinates.floor);
+
+      if (map.current) {
+        // Center map on the path
+        const bounds = new mapboxgl.LngLatBounds();
+        result.path.forEach((point: PathPoint) => {
+          bounds.extend([point.coordinates.x, point.coordinates.y]);
+        });
+        map.current.fitBounds(bounds, { padding: 50 });
+      }
+
+      // Start animation with red path
+      animateRoute(result.path);
+
+    } catch (err) {
+      console.error('Emergency route calculation failed:', err);
+      setIsEmergency(false);
+    }
   };
 
   return (
