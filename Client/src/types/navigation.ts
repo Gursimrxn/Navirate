@@ -1,0 +1,1 @@
+export type PathPoint = { x: number; y: number; };
