@@ -2,8 +2,19 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useState } from 'react';
 import SearchBar from './SearchBar';
 import { navigationEvents } from '../services/eventService';
+import { FloorSwitcher } from './FloorSwitcher';
 
-export const Dock = () => {
+interface DockProps {
+  currentFloor: string;
+  setCurrentFloor: (floor: string) => void;
+  // ...existing props
+}
+
+export const Dock: React.FC<DockProps> = ({
+  currentFloor,
+  setCurrentFloor,
+  // ...existing props
+}) => {
     const [isSearching, setIsSearching] = useState(false);
     const [startId, setStartId] = useState('');
     const [endId, setEndId] = useState('');
@@ -101,6 +112,11 @@ export const Dock = () => {
                     </div>
                 </div>
             </motion.div>
+            <FloorSwitcher 
+                currentFloor={currentFloor}
+                setCurrentFloor={setCurrentFloor}
+                className="absolute left-4 bottom-24 mb-8" // Position above dock
+            />
         </>
     );
 };
