@@ -2,6 +2,7 @@ import { motion } from "framer-motion";
 import { Search, Play } from "lucide-react";
 import { useState } from "react";
 import { navigationService } from "../services/navigationService";
+import { navigationEvents } from "../services/eventService";
 
 interface SearchBarProps {
   onClose: () => void;
@@ -25,6 +26,22 @@ const SearchBar = ({
     { id: "5", name: "Exit", status: "Available", color: "bg-green-400", icon: "🚪" },
     { id: "29", name: "Nurse Office", status: "Available", color: "bg-green-400", icon: "🏥" },
   ];
+
+  const handleNavigation = async (destinationId: string) => {
+    try {
+      if (navigationService.isNavigating) {
+        return;
+      }
+
+      navigationService.isNavigating = true;
+      navigationEvents.emit(startId, destinationId);
+      onClose();
+    } catch (error) {
+      console.error("Navigation failed:", error);
+    } finally {
+      navigationService.isNavigating = false;
+    }
+  };
 
   return (
     <motion.div
@@ -50,14 +67,7 @@ const SearchBar = ({
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             className="bg-green-500 text-white p-2 rounded-full"
-            onClick={async () => {
-              try {
-                await navigationService.getPath(startId, searchQuery);
-                onClose();
-              } catch (error) {
-                console.error("Navigation failed:", error);
-              }
-            }}
+            onClick={() => handleNavigation(searchQuery)}
           >
             <Play />
           </motion.button>
@@ -68,14 +78,7 @@ const SearchBar = ({
             <motion.div
               key={index}
               className="flex justify-between items-center border-b border-gray-200 py-3 last:border-none cursor-pointer"
-              onClick={async () => {
-                try {
-                  await navigationService.getPath(startId, dest.id);
-                  onClose();
-                } catch (error) {
-                  console.error("Navigation failed:", error);
-                }
-              }}
+              onClick={() => handleNavigation(dest.id)}
               whileHover={{ backgroundColor: "rgba(0,0,0,0.03)" }}
             >
               <div className="flex items-center gap-2">
@@ -97,14 +100,7 @@ const SearchBar = ({
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 className="flex items-center gap-2 px-4 py-2 bg-gray-100 rounded-full hover:bg-gray-200"
-                onClick={async () => {
-                  try {
-                    await navigationService.getPath(startId, dest.id);
-                    onClose();
-                  } catch (error) {
-                    console.error("Navigation failed:", error);
-                  }
-                }}
+                onClick={() => handleNavigation(dest.id)}
               >
                 <span>{dest.icon}</span>
                 <span>{dest.name}</span>

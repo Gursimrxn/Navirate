@@ -1,4 +1,3 @@
-import { navigationEvents } from "./eventService.ts";
 import { config } from "../config.ts";
 
 const BASE_URL = config.apiBaseUrl;
@@ -19,10 +18,11 @@ interface NavigationService {
 }
 
 class NavigationServiceImpl implements NavigationService {
+  public isNavigating = false;
+
   async getPath(startId: string, endId: string): Promise<any> {
     try {
       const result = await this.calculateRoute(startId, endId);
-      navigationEvents.emit("5", endId);
       return result;
     } catch (error) {
       console.error("Navigation error:", error);
