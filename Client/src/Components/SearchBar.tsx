@@ -3,6 +3,7 @@ import { Search, Play } from "lucide-react";
 import { useState } from "react";
 import { navigationService } from "../services/navigationService";
 import { navigationEvents } from "../services/eventService";
+import { RouteConfirmation } from "./RouteConfirmation";
 
 interface SearchBarProps {
   onClose: () => void;
@@ -19,6 +20,7 @@ const SearchBar = ({
   startId,
 }: SearchBarProps) => {
   const [searchQuery, setSearchQuery] = useState("");
+  const [showConfirmation, setShowConfirmation] = useState(false);
 
   const destinations = [
     { id: "31", name: "Restroom", status: "Available", color: "bg-green-400", icon: "🚽" },
@@ -43,6 +45,27 @@ const SearchBar = ({
     }
   };
 
+  const handleSearch = () => {
+    if (!searchQuery.trim()) return;
+    setShowConfirmation(true); 
+  };
+
+  const handleStartRoute = () => {
+    handleNavigation(searchQuery);
+  };
+
+  if (showConfirmation) {
+    return (
+      <RouteConfirmation
+        destination={searchQuery}
+        steps={15}
+        time="2"
+        onStartRoute={handleStartRoute}
+        onDiscard={() => setShowConfirmation(false)}
+      />
+    );
+  }
+
   return (
     <motion.div
       initial={{ y: -100, opacity: 0 }}
@@ -63,14 +86,9 @@ const SearchBar = ({
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            className="bg-green-500 text-white p-2 rounded-full"
-            onClick={() => handleNavigation(searchQuery)}
-          >
-            <Play />
-          </motion.button>
+          <button onClick={handleSearch} className="bg-green-500 px-3 rounded-full text-white">
+            Go
+          </button>
         </div>
 
         <div className="bg-gray-100 rounded-lg shadow-md p-4">

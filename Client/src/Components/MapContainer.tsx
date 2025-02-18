@@ -1,30 +1,24 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
-import { navigationEvents } from '../services/eventService';
+import { EmergencyPath, navigationEvents } from '../services/eventService';
 import { navigationService } from '../services/navigationService';
+import { PathPoint, BuildingData } from "../types/navigationTypes";
+import { getBearing } from '../utils/navigationUtils';
+
+const ANIMATION_DURATION = 2000;
+const CAMERA_MOVE_DURATION = 1500;
+const DRAW_DELAY = 500;
+
+// Smooth easing function
+const easeOutQuart = (x: number): number => {
+  return 1 - Math.pow(1 - x, 4);
+};
+
+const MAP_STYLE = "mapbox://styles/ceiia/cl8a9clfo00n314pmwmsvha8i";
+const INITIAL_CENTER: [number, number] = [76.66067, 30.51638];
 
 mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN;
-
-interface PathPoint {
-  coordinates: {
-    x: number;
-    y: number;
-    floor: string;
-  };
-  name?: string;
-}
-
-interface BuildingFeature extends GeoJSON.Feature<GeoJSON.Geometry> {
-  properties: {
-    floor: string;
-    [key: string]: any;
-  };
-}
-
-interface BuildingData extends GeoJSON.FeatureCollection<GeoJSON.Geometry> {
-  features: BuildingFeature[];
-}
 
 export default function IndoorNavigation({ currentFloor, setCurrentFloor }: { 
   currentFloor: string;
@@ -34,192 +28,236 @@ export default function IndoorNavigation({ currentFloor, setCurrentFloor }: {
   const map = useRef<mapboxgl.Map | null>(null);
   const [startId, setStartId] = useState("5");
   const [endId, setEndId] = useState("32");
-  const [instructions, setInstructions] = useState<string[]>([]);
   const animationRef = useRef<number | null>(null);
   const latestPath = useRef<PathPoint[]>([]);
   const buildingData = useRef<BuildingData | null>(null);
   const [isAnimating, setIsAnimating] = useState(false);
   const [isEmergency, setIsEmergency] = useState(false);
 
-  // Helper functions
-  const toRad = (deg: number) => (deg * Math.PI) / 180;
-  const toDeg = (rad: number) => (rad * 180) / Math.PI;
+  const initRouteLayer = useCallback((mapInstance: mapboxgl.Map) => {
+    if (mapInstance.getSource('route')) return;
+    
+    mapInstance.addSource('route', {
+      type: 'geojson',
+      data: { type: 'FeatureCollection', features: [] }
+    });
 
-  const getBearing = (startLat: number, startLng: number, destLat: number, destLng: number) => {
-    startLat = toRad(startLat);
-    startLng = toRad(startLng);
-    destLat = toRad(destLat);
-    destLng = toRad(destLng);
+    mapInstance.addLayer({
+      id: 'route',
+      type: 'line',
+      source: 'route',
+      layout: { 'line-join': 'round', 'line-cap': 'round' },
+      paint: {
+        'line-color': ['get', 'color'],
+        'line-width': 5,
+        'line-opacity': ['get', 'opacity']
+      }
+    });
+  }, []);
 
-    const y = Math.sin(destLng - startLng) * Math.cos(destLat);
-    const x =
-      Math.cos(startLat) * Math.sin(destLat) -
-      Math.sin(startLat) * Math.cos(destLat) * Math.cos(destLng - startLng);
-    let bearing = Math.atan2(y, x);
-    bearing = toDeg(bearing);
-    return (bearing + 360) % 360;
-  };
+  const generateRouteFeatures = useCallback((path: PathPoint[], floor: string, emergency: boolean) => {
+    return path.slice(0, -1).map((p1, i) => {
+      const p2 = path[i + 1];
+      const isCurrent = p1.coordinates.floor === floor;
+      return {
+        type: "Feature" as const,
+        geometry: {
+          type: "LineString" as const,
+          coordinates: [[p1.coordinates.x, p1.coordinates.y], [p2.coordinates.x, p2.coordinates.y]]
+        },
+        properties: {
+          color: emergency ? '#FF0000' : (isCurrent ? '#30A953' : 'gray'),
+          opacity: isCurrent ? 1 : 0.3,
+        }
+      };
+    });
+  }, []);
 
-  const haversineDistance = (lat1: number, lng1: number, lat2: number, lng2: number) => {
-    const R = 6371000;
-    const dLat = toRad(lat2 - lat1);
-    const dLng = toRad(lat2 - lng1);
-    console.log(lng2);
-    const a =
-      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-      Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) * Math.sin(dLng / 2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    return R * c;
-  };
+  const updateRouteColors = useCallback(() => {
+    if (!latestPath.current.length || !map.current?.getSource('route')) return;
 
-  const computeTurnByTurnInstructions = (path: PathPoint[]) => {
-    const instructions: string[] = [];
-    if (path.length < 2) return instructions;
+    const features = generateRouteFeatures(latestPath.current, currentFloor, isEmergency);
+    
+    (map.current?.getSource('route') as mapboxgl.GeoJSONSource)?.setData({
+      type: 'FeatureCollection',
+      features
+    });
+  }, [currentFloor, isEmergency, generateRouteFeatures]);
 
-    const first = path[0].coordinates;
-    const second = path[1].coordinates;
-    let prevBearing = getBearing(first.y, first.x, second.y, second.x);
-    const firstDist = Math.round(haversineDistance(first.y, first.x, second.y, second.x));
-
-    if (path[0].name) {
-      instructions.push(`Start at ${path[0].name}. Walk straight for ${firstDist} meters.`);
-    } else {
-      instructions.push(`Start: Walk straight for ${firstDist} meters.`);
+  // Add animation cleanup helper
+  const cleanupAnimation = useCallback(() => {
+    if (animationRef.current) {
+      cancelAnimationFrame(animationRef.current);
+      animationRef.current = null;
     }
+    setIsAnimating(false);
+  }, []);
 
-    for (let i = 1; i < path.length - 1; i++) {
-      const curr = path[i].coordinates;
-      const next = path[i + 1].coordinates;
-      const currentBearing = getBearing(curr.y, curr.x, next.y, next.x);
-      const segmentDistance = Math.round(haversineDistance(curr.y, curr.x, next.y, next.x));
+  // Update floor change effect to handle animation
+  useEffect(() => {
+    if (!map.current?.isStyleLoaded()) return;
+    cleanupAnimation(); // Clean up any ongoing animation
+    updateFloorFilter();
+    updateRouteColors(); // Immediately show full path on new floor
+  }, [currentFloor, cleanupAnimation, updateRouteColors]);
 
-      let turnAngle = currentBearing - prevBearing;
-      while (turnAngle < -180) turnAngle += 360;
-      while (turnAngle > 180) turnAngle -= 360;
+  const animateRoute = useCallback((path: PathPoint[]) => {
+    if (!map.current || path.length < 2) return;
 
-      if (Math.abs(turnAngle) >= 30) {
-        const turnDirection = turnAngle > 0 ? "right" : "left";
-        instructions.push(
-          segmentDistance === 0 
-            ? `Turn ${turnDirection}.`
-            : `Turn ${turnDirection} and walk for ${segmentDistance} meters.`
-        );
-        prevBearing = currentBearing;
-      } else if (segmentDistance > 0) {
-        instructions.push(`Continue straight for ${segmentDistance} meters.`);
+    cleanupAnimation(); // Ensure clean state before starting
+
+    // Move camera to starting position with easing
+    const startPoint = path[0].coordinates;
+    const nextPoint = path[1].coordinates;
+    map.current.easeTo({
+      center: [startPoint.x, startPoint.y - 0.00025],
+      bearing: getBearing(startPoint.y, startPoint.x, nextPoint.y, nextPoint.x),
+      pitch: 60,
+      zoom: 19.5,
+      duration: CAMERA_MOVE_DURATION,
+      easing: easeOutQuart
+    });
+
+    let rafId: number;
+    const startTime = performance.now();
+
+    const animate = (currentTime: number) => {
+      const elapsed = currentTime - startTime;
+      const rawProgress = Math.min((elapsed - DRAW_DELAY) / ANIMATION_DURATION, 1);
+      
+      // Enhanced easing for ultra-smooth animation
+      const progress = rawProgress < 0 ? 0 : easeOutQuart(rawProgress);
+      const totalLength = path.length - 1;
+      const exactSegment = progress * totalLength;
+      const currentSegment = Math.floor(exactSegment);
+      const segmentProgress = exactSegment - currentSegment;
+
+      const animatedFeatures: GeoJSON.Feature[] = [];
+
+      // Draw completed segments
+      for (let i = 0; i < currentSegment; i++) {
+        const p = path[i];
+        const next = path[i + 1];
+        animatedFeatures.push({
+          type: 'Feature',
+          geometry: {
+            type: 'LineString',
+            coordinates: [[p.coordinates.x, p.coordinates.y], [next.coordinates.x, next.coordinates.y]]
+          },
+          properties: {
+            color: isEmergency ? '#FF0000' : (p.coordinates.floor === currentFloor ? '#30A953' : 'gray'),
+            opacity: p.coordinates.floor === currentFloor ? 1 : 0.3
+          }
+        });
       }
 
-      if (path[i + 1].name?.toLowerCase().includes("lift")) {
-        instructions.push("Enter the lift.");
+      // Add current animating segment with smooth interpolation
+      if (currentSegment < totalLength) {
+        const p = path[currentSegment];
+        const next = path[currentSegment + 1];
+        
+        // Smooth interpolation between points
+        const interpolatedPoint = {
+          x: p.coordinates.x + (next.coordinates.x - p.coordinates.x) * segmentProgress,
+          y: p.coordinates.y + (next.coordinates.y - p.coordinates.y) * segmentProgress
+        };
+
+        animatedFeatures.push({
+          type: 'Feature',
+          geometry: {
+            type: 'LineString',
+            coordinates: [[p.coordinates.x, p.coordinates.y], [interpolatedPoint.x, interpolatedPoint.y]]
+          },
+          properties: {
+            color: isEmergency ? '#FF0000' : (p.coordinates.floor === currentFloor ? '#30A953' : 'gray'),
+            opacity: p.coordinates.floor === currentFloor ? 1 : 0.3
+          }
+        });
       }
-    }
 
-    instructions.push("You have arrived at your destination.");
-    return mergeStraightInstructions(instructions);
-  };
+      (map.current?.getSource('route') as mapboxgl.GeoJSONSource)?.setData({
+        type: 'FeatureCollection',
+        features: animatedFeatures
+      });
 
-  const mergeStraightInstructions = (instructions: string[]) => {
-    const merged: string[] = [];
-    for (const instruction of instructions) {
-      const last = merged[merged.length - 1];
-      if (last?.startsWith("Continue straight") && instruction.startsWith("Continue straight")) {
-        const prevDist = parseInt(last.match(/\d+/)![0]);
-        const currDist = parseInt(instruction.match(/\d+/)![0]);
-        merged[merged.length - 1] = `Continue straight for ${prevDist + currDist} meters.`;
+      if (progress < 1) {
+        rafId = requestAnimationFrame(animate);
       } else {
-        merged.push(instruction);
+        setIsAnimating(false);
+        updateRouteColors();
       }
-    }
-    return merged;
-  };
+    };
 
-  // Map initialization
+    setIsAnimating(true);
+    rafId = requestAnimationFrame(animate);
+
+    return () => {
+      if (rafId) cancelAnimationFrame(rafId);
+    };
+  }, [currentFloor, isEmergency, updateRouteColors, cleanupAnimation]);
+
   useEffect(() => {
     if (!mapContainer.current) return;
 
-    let mapInstance: mapboxgl.Map | null = null;
-    try {
-      mapInstance = new mapboxgl.Map({
-        container: mapContainer.current,
-        style: "mapbox://styles/ceiia/cl8a9clfo00n314pmwmsvha8i",
-        center: [76.66067, 30.51638],
-        zoom: 13,
-        antialias: true,
-      });
-
-      map.current = mapInstance;
-
-      mapInstance.on('load', async () => {
-        try {
-          const response = await fetch(`/test3.geojson`);
-          if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-          }
-          const data: BuildingData = await response.json();
-          buildingData.current = data;
-
-          if (!mapInstance || !mapInstance.isStyleLoaded()) return;
-          
-          mapInstance.addSource('walls', { 
-            type: 'geojson', 
-            data,
-            generateId: true
-          });
-          
-          addWallLayers();
-          fitMapToBounds();
-        } catch (err) {
-          console.error('Error loading/rendering building:', err);
-        }
-      });
-    } catch (err) {
-      console.error('Error initializing map:', err);
-    }
-
-    return () => {
-      if (animationRef.current) {
-        cancelAnimationFrame(animationRef.current);
-        animationRef.current = null;
-      }
-      if (mapInstance) {
-        mapInstance.remove();
-      }
-      map.current = null;
-    };
-  }, []);
-
-  // Update floor layers when floor changes
-  useEffect(() => {
-    if (!map.current?.isStyleLoaded()) return;
-    updateFloorFilter();
-  }, [currentFloor]); // Only depend on currentFloor
-
-  useEffect(() => {
-    const unsubscribe = navigationEvents.subscribe(async (start, endIdOrPath) => {
-      // Clean up any current animation
-      if (animationRef.current) {
-        cancelAnimationFrame(animationRef.current);
-      }
-
-      if (typeof endIdOrPath === "object" && endIdOrPath.type === "emergency") {
-        setIsEmergency(true);
-        // ...existing emergency handling code...
-      } else if (typeof endIdOrPath === "string") {
-        setIsEmergency(false);
-        setStartId(start);
-        setEndId(endIdOrPath);
-        // Call calculateRoute here to start normal route logic
-        await calculateRoute();
-      }
+    const mapInstance = new mapboxgl.Map({
+      container: mapContainer.current,
+      style: MAP_STYLE,
+      center: INITIAL_CENTER,
+      zoom: 13,
+      antialias: true,
     });
 
-    return () => {
-      unsubscribe();
-      if (animationRef.current !== null) {
-        cancelAnimationFrame(animationRef.current);
+    map.current = mapInstance;
+
+    const handleLoad = async () => {
+      try {
+        const response = await fetch('/test3.geojson');
+        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+        
+        const data: BuildingData = await response.json();
+        buildingData.current = data;
+        
+        if (!mapInstance.isStyleLoaded()) return;
+        
+        mapInstance.addSource('walls', { 
+          type: 'geojson', 
+          data,
+          generateId: true
+        });
+
+        initRouteLayer(mapInstance);
+        addWallLayers();
+        fitMapToBounds();
+      } catch (err) {
+        console.error('Error loading/rendering building:', err);
       }
     };
-  }, []); // Empty dependency array since we handle updates inside the subscription
+
+    mapInstance.on('load', handleLoad);
+
+    return () => {
+      cleanupAnimation();
+      mapInstance.remove();
+    };
+  }, [cleanupAnimation, initRouteLayer]);
+
+  const handleEmergencyNavigation = useCallback(async () => {
+    cleanupAnimation();
+    setIsEmergency(true);
+    try {
+      const result = await navigationService.calculateEmergencyRoute(startId);
+      if (!result?.path?.length) throw new Error('No valid emergency path found');
+
+      latestPath.current = result.path;
+      setCurrentFloor(result.path[0].coordinates.floor);
+      animateRoute(result.path);
+    } catch (err) {
+      console.error('Emergency route calculation failed:', err);
+      setIsEmergency(false);
+    }
+  }, [startId, cleanupAnimation, setCurrentFloor, animateRoute]);
+
+  
 
   const addWallLayers = () => {
     if (!map.current?.getLayer('wallsFill')) {
@@ -259,7 +297,6 @@ export default function IndoorNavigation({ currentFloor, setCurrentFloor }: {
     if (latestPath.current.length >= 2) {
       const first = latestPath.current[0].coordinates;
       const second = latestPath.current[1].coordinates;
-      // Compute bearing based on the first two points of the path
       const newBearing = getBearing(first.y, first.x, second.y, second.x);
       map.current?.rotateTo(newBearing, { duration: 1000 });
     }
@@ -268,7 +305,6 @@ export default function IndoorNavigation({ currentFloor, setCurrentFloor }: {
   const updateFloorFilter = () => {
     if (!map.current) return;
 
-    // Ensure the style is loaded and layers exist before setting filters
     if (
       !map.current.isStyleLoaded() ||
       !map.current.getLayer('wallsFill') ||
@@ -283,244 +319,48 @@ export default function IndoorNavigation({ currentFloor, setCurrentFloor }: {
     updateRouteColors();
   };
 
-  const updateRouteColors = () => {
-    if (!latestPath.current.length || !map.current?.getSource('route')) return;
+  const calculateRoute = useCallback(async () => {
+    cleanupAnimation();
 
-    const features = latestPath.current.slice(0, -1).map((p1, i) => {
-      const p2 = latestPath.current[i + 1];
-      const isCurrent = p1.coordinates.floor === currentFloor;
-      return {
-        type: 'Feature',
-        geometry: {
-          type: 'LineString',
-          coordinates: [
-            [p1.coordinates.x, p1.coordinates.y],
-            [p2.coordinates.x, p2.coordinates.y],
-          ],
-        },
-        properties: {
-          color: isEmergency ? '#FF0000' : (isCurrent ? '#30A953' : 'gray'),
-          opacity: isCurrent ? 1 : 0.3,
-        },
-      } as GeoJSON.Feature<GeoJSON.LineString>;
-    });
-
-    (map.current?.getSource('route') as mapboxgl.GeoJSONSource)?.setData({
-      type: 'FeatureCollection',
-      features,
-    });
-  };
-
-  const calculateRoute = async () => {
     if (!startId || !endId) {
       console.error('Start or end ID missing');
       return;
     }
 
-    // Prevent recalculation if already calculating
-    if (isAnimating) return;
-
-    // Stop any ongoing animation
-    if (isAnimating && animationRef.current) {
-      cancelAnimationFrame(animationRef.current);
-      setIsAnimating(false);
-    }
-
     try {
       const result = await navigationService.calculateRoute(startId, endId);
-      if (!result?.path?.length) {
-        throw new Error('No valid path found');
-      }
+      if (!result?.path?.length) throw new Error('No valid path found');
 
       latestPath.current = result.path;
-      setInstructions(computeTurnByTurnInstructions(result.path));
       setCurrentFloor(result.path[0].coordinates.floor);
-
-      // Center map on the path with padding
-      if (map.current) {
-        const bounds = new mapboxgl.LngLatBounds();
-        result.path.forEach((point: PathPoint) => {
-          bounds.extend([point.coordinates.x, point.coordinates.y]);
-        });
-        map.current.fitBounds(bounds, {
-          padding: { top: 50, bottom: 50, left: 200, right: 200 },
-          duration: 1000
-        });
-      }
-
-      // Setup route source if it doesn't exist
-      if (!map.current?.getSource('route')) {
-        map.current?.addSource('route', {
-          type: 'geojson',
-          data: { type: 'FeatureCollection', features: [] }
-        });
-      }
-
-      // Setup route layer if it doesn't exist
-      if (!map.current?.getLayer('route')) {
-        map.current?.addLayer({
-          id: 'route',
-          type: 'line',
-          source: 'route',
-          layout: {
-            'line-join': 'round',
-            'line-cap': 'round'
-          },
-          paint: {
-            'line-color': ['get', 'color'],
-            'line-width': 5,
-            'line-opacity': ['get', 'opacity']
-          }
-        });
-      }
-
-      // Start animation
       animateRoute(result.path);
-
     } catch (err) {
       console.error('Route calculation failed:', err);
     }
-  };
+  }, [startId, endId, cleanupAnimation, setCurrentFloor, animateRoute]);
 
-  const animateRoute = (path: PathPoint[]) => {
-    let progress = 0;
-    const duration = 2000;
-    let startTime: number | null = null;
-
-    const animate = (timestamp: number) => {
-      if (!startTime) startTime = timestamp;
-      progress = Math.min((timestamp - startTime) / duration, 1);
-
-      const totalSegments = path.length - 1;
-      const currentSegment = Math.min(Math.floor(progress * totalSegments), totalSegments);
-      const segmentProgress = (progress * totalSegments) % 1;
-
-      // Only animate the path, keep camera fixed
-      const animatedFeatures = path.slice(0, currentSegment + 1).map((point, index) => {
-        if (index === currentSegment && segmentProgress < 1) {
-          const nextPoint = path[index + 1];
-          const interpolatedPoint = {
-            x: point.coordinates.x + (nextPoint.coordinates.x - point.coordinates.x) * segmentProgress,
-            y: point.coordinates.y + (nextPoint.coordinates.y - point.coordinates.y) * segmentProgress
-          };
-
-          return {
-            type: 'Feature',
-            geometry: {
-              type: 'LineString',
-              coordinates: [
-                [point.coordinates.x, point.coordinates.y],
-                [interpolatedPoint.x, interpolatedPoint.y]
-              ]
-            },
-            properties: {
-              color: isEmergency ? '#FF0000' : (point.coordinates.floor === currentFloor ? '#30A953' : 'gray'),
-              opacity: point.coordinates.floor === currentFloor ? 1 : 0.3
-            }
-          } as GeoJSON.Feature;
-        } else if (index < currentSegment) {
-          return {
-            type: 'Feature',
-            geometry: {
-              type: 'LineString',
-              coordinates: [
-                [point.coordinates.x, point.coordinates.y],
-                [path[index + 1].coordinates.x, path[index + 1].coordinates.y]
-              ]
-            },
-            properties: {
-              color: isEmergency ? '#FF0000' : (point.coordinates.floor === currentFloor ? '#30A953' : 'gray'),
-              opacity: point.coordinates.floor === currentFloor ? 1 : 0.3
-            }
-          } as GeoJSON.Feature;
-        }
-      }).filter((feature): feature is GeoJSON.Feature => feature !== undefined);
-
-      (map.current?.getSource('route') as mapboxgl.GeoJSONSource)?.setData({
-        type: 'FeatureCollection',
-        features: animatedFeatures
-      });
-
-      if (progress < 1) {
-        animationRef.current = requestAnimationFrame(animate);
-      } else {
-        setIsAnimating(false);
-        updateRouteColors();
+  useEffect(() => {
+    const unsubscribe = navigationEvents.subscribe((start, endIdOrPath: string | EmergencyPath) => {
+      setStartId(start);
+      
+      if (typeof endIdOrPath === 'string') {
+        setEndId(endIdOrPath);
+        setIsEmergency(false);
+        calculateRoute();
+      } else if (endIdOrPath.type === "emergency") {
+        handleEmergencyNavigation();
       }
+    });
+
+    return () => {
+      unsubscribe();
+      cleanupAnimation();
     };
-
-    // Initialize animation - set camera to starting point
-    setIsAnimating(true);
-    if (map.current && path.length >= 2) {
-      const startPoint = path[0];
-      const nextPoint = path[1];
-      const bearing = getBearing(
-        startPoint.coordinates.y,
-        startPoint.coordinates.x,
-        nextPoint.coordinates.y,
-        nextPoint.coordinates.x
-      );
-
-      map.current.easeTo({
-        center: [startPoint.coordinates.x, startPoint.coordinates.y],
-        bearing: bearing,
-        pitch: 60,
-        zoom: 19.5,
-        duration: 1000
-      });
-    }
-    animationRef.current = requestAnimationFrame(animate);
-  };
-
-  const handleEmergencyNavigation = async () => {
-    setIsEmergency(true);
-    try {
-      const result = await navigationService.calculateEmergencyRoute(startId);
-      if (!result?.path?.length) {
-        throw new Error('No valid emergency path found');
-      }
-
-      latestPath.current = result.path;
-      setInstructions([
-        "🚨 EMERGENCY EVACUATION ROUTE 🚨",
-        ...computeTurnByTurnInstructions(result.path)
-      ]);
-      setCurrentFloor(result.path[0].coordinates.floor);
-
-      if (map.current) {
-        // Center map on the path
-        const bounds = new mapboxgl.LngLatBounds();
-        result.path.forEach((point: PathPoint) => {
-          bounds.extend([point.coordinates.x, point.coordinates.y]);
-        });
-        map.current.fitBounds(bounds, { padding: 50 });
-      }
-
-      // Start animation with red path
-      animateRoute(result.path);
-
-    } catch (err) {
-      console.error('Emergency route calculation failed:', err);
-      setIsEmergency(false);
-    }
-  };
+  }, [calculateRoute, handleEmergencyNavigation, cleanupAnimation]);
 
   return (
     <div className="relative top-0 w-full h-screen">
-
-      {/* Display instructions if available */}
-      {instructions.length > 0 && (
-        <div className="absolute z-10 top-4 right-4 bg-white p-4 rounded-lg shadow-md max-w-md">
-          <h3 className="font-bold mb-2">Navigation Instructions:</h3>
-          <ol className="list-decimal pl-4">
-            {instructions.map((instruction, index) => (
-              <li key={index}>{instruction}</li>
-            ))}
-          </ol>
-        </div>
-      )}
-      
       <div ref={mapContainer} className="w-full h-full" />
     </div>
   );
-}
+};
