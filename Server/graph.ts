@@ -166,21 +166,49 @@ export function findPath(startNodeId: string, endNodeId: string, currentFloor?: 
   }
 }
 export function findEmergencyPath(startNodeId: string) {
-  const startNode = graph.getNode(startNodeId);
-  if (!startNode?.data) {
-    throw new Error(`Node not found: ${startNodeId}`);
-  }
-  const startFloor = startNode.data.floor;
+  const mainDoorId = "5"; 
   const liftId = "36";
-  const pathToLift = pathFinder.find(startNodeId, liftId);
-  if (!pathToLift || pathToLift.length === 0) {
-    throw new Error(`No emergency path found from ${startNodeId}`);
+
+  const startNode = graph.getNode(startNodeId);
+  const endNode = graph.getNode(mainDoorId);
+  if (!startNode?.data || !endNode?.data) {
+    throw new Error(`Node not found: ${startNodeId} or ${mainDoorId}`);
   }
-  const sortedPathToLift = pathToLift.reverse();
-  const leg1 = sortedPathToLift.map(n => ({
+
+  const startFloor = startNode.data.floor;
+  const mainDoorFloor = endNode.data.floor;
+
+  // If already on the same floor
+  if (startFloor === mainDoorFloor) {
+    const directPath = pathFinder.find(startNodeId, mainDoorId);
+    if (!directPath || directPath.length === 0) {
+      throw new Error(`No emergency path found from ${startNodeId} to ${mainDoorId}`);
+    }
+    return directPath.reverse().map(n => ({
+      id: n.id,
+      name: getNodeName(n.id),
+      coordinates: { ...n.data, floor: String(n.data.floor) }
+    }));
+  }
+
+  // Multi-floor path: start -> lift -> main door
+  const pathToLift = pathFinder.find(startNodeId, liftId);
+  const pathFromLift = pathFinder.find(liftId, mainDoorId);
+  if (!pathToLift || !pathToLift.length || !pathFromLift || !pathFromLift.length) {
+    throw new Error(`No multi-floor emergency path from ${startNodeId} to ${mainDoorId}`);
+  }
+
+  const leg1 = pathToLift.reverse().map(n => ({
     id: n.id,
     name: getNodeName(n.id),
     coordinates: { ...n.data, floor: String(n.data.floor) }
   }));
-  return leg1;
+
+  const leg2 = pathFromLift.reverse().map(n => ({
+    id: n.id,
+    name: getNodeName(n.id),
+    coordinates: { ...n.data, floor: String(n.data.floor) }
+  }));
+
+  return [...leg1, ...leg2];
 }
