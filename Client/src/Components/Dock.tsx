@@ -1,19 +1,23 @@
+import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useState } from 'react';
 import SearchBar from './SearchBar';
 import { navigationEvents } from '../services/eventService';
-import { FloorSwitcher } from './FloorSwitcher';
 
 interface DockProps {
+  isOpen: boolean;
+  onClose: () => void;
+  children: React.ReactNode;
   currentFloor: string;
   setCurrentFloor: (floor: string) => void;
-  // ...existing props
 }
 
 export const Dock: React.FC<DockProps> = ({
+  isOpen,
+  onClose,
+  children,
   currentFloor,
   setCurrentFloor,
-  // ...existing props
 }) => {
     const [isSearching, setIsSearching] = useState(false);
     const [startId, setStartId] = useState('');
@@ -47,6 +51,23 @@ export const Dock: React.FC<DockProps> = ({
                         onCalculateRoute={handleCalculateRoute}
                         isAnimating={isAnimating}
                     />
+                )}
+            </AnimatePresence>
+
+            <AnimatePresence>
+                {isOpen && (
+                    <motion.div
+                        className="fixed inset-x-0 bottom-0 bg-white rounded-t-2xl shadow-lg z-40"
+                        initial={{ y: '100%' }}
+                        animate={{ y: 0 }}
+                        exit={{ y: '100%' }}
+                        transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+                    >
+                        <div className="w-16 h-1 mx-auto my-3 bg-gray-300 rounded-full" />
+                        <div className="h-[60vh] max-h-[500px]">
+                            {children}
+                        </div>
+                    </motion.div>
                 )}
             </AnimatePresence>
 
@@ -112,11 +133,6 @@ export const Dock: React.FC<DockProps> = ({
                     </div>
                 </div>
             </motion.div>
-            <FloorSwitcher 
-                currentFloor={currentFloor}
-                setCurrentFloor={setCurrentFloor}
-                className="absolute left-4 bottom-24 mb-8" // Position above dock
-            />
         </>
     );
 };
