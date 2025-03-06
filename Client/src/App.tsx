@@ -26,7 +26,6 @@ export default function App() {
           setDockOpen={setIsDockOpen}
         />
         
-        {/* Add the FloorSwitcher directly to the App component */}
         
         <Dock 
           isOpen={isDockOpen}

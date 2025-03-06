@@ -14,10 +14,7 @@ interface DockProps {
 
 export const Dock: React.FC<DockProps> = ({
   isOpen,
-  onClose,
   children,
-  currentFloor,
-  setCurrentFloor,
 }) => {
     const [isSearching, setIsSearching] = useState(false);
     const [startId, setStartId] = useState('');
@@ -57,14 +54,14 @@ export const Dock: React.FC<DockProps> = ({
             <AnimatePresence>
                 {isOpen && (
                     <motion.div
-                        className="fixed inset-x-0 bottom-0 bg-white rounded-t-2xl shadow-lg z-40"
+                        className="mx-auto fixed max-w-md inset-x-0 bottom-0 bg-white/95 backdrop-blur-sm rounded-t-2xl shadow-lg z-40"
                         initial={{ y: '100%' }}
                         animate={{ y: 0 }}
                         exit={{ y: '100%' }}
                         transition={{ type: 'spring', damping: 25, stiffness: 300 }}
                     >
                         <div className="w-16 h-1 mx-auto my-3 bg-gray-300 rounded-full" />
-                        <div className="h-[60vh] max-h-[500px]">
+                        <div className="flex justify-center max-h-[500px]">
                             {children}
                         </div>
                     </motion.div>

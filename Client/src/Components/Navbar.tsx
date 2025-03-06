@@ -179,7 +179,7 @@ export const Navbar = () => {
   };
 
   return (
-    <div className="fixed z-20 top-10 w-full">
+    <div className="fixed z-20 mt-12 w-full">
       <motion.div
         className="w-xl flex justify-evenly mx-auto rounded-full shadow-2xl px-3 p-2 bg-white"
         initial={{ y: -100, opacity: 0 }}
