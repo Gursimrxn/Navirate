@@ -15,7 +15,8 @@ const easeOutQuart = (x: number): number => {
   return 1 - Math.pow(1 - x, 4);
 };
 
-const MAP_STYLE = "mapbox://styles/ceiia/cl8a9clfo00n314pmwmsvha8i";
+// const MAP_STYLE = "mapbox://styles/ceiia/cl8a9clfo00n314pmwmsvha8i";
+const MAP_STYLE = "mapbox://styles/mapbox/standard";
 const INITIAL_CENTER: [number, number] = [76.66067, 30.51638];
 
 mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN;
