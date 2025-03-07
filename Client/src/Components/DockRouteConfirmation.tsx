@@ -1,5 +1,5 @@
-import React from 'react';
-import { motion } from 'framer-motion';
+import React, { useState, useRef } from 'react';
+import { motion, PanInfo, useMotionValue, AnimatePresence } from 'framer-motion';
 import { ArrowRight, MapPin, Clock, Footprints } from 'lucide-react';
 
 export interface DockRouteConfirmationProps {
@@ -21,69 +21,169 @@ export const DockRouteConfirmation: React.FC<DockRouteConfirmationProps> = ({
   onStartRoute,
   onCancel
 }) => {
+  const [isExpanded, setIsExpanded] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const y = useMotionValue(0);
+
+  const handleDrag = (_: any, info: PanInfo) => {
+    // More sensitive drag for snappier response
+    if (info.offset.y < -15 && !isExpanded) {
+      setIsExpanded(true);
+    } else if (info.offset.y > 15 && isExpanded) {
+      setIsExpanded(false);
+    }
+  };
+
+  // Faster snappier transitions
+  // Very fast fade transitions
+  const quickFade = { 
+    type: "tween", 
+    duration: 0.15
+  };
+
+  // Button padding needs to use actual strings rather than template literals for Tailwind
+  const buttonPadding = "py-2.5";
+  const containerPadding = "p-3";
+
   return (
-    <div className="h-full w-full flex items-center justify-center">
+    <div className="fixed bottom-0 left-0 right-0 flex justify-center" ref={containerRef}>
       <motion.div 
-        className="flex flex-col bg-transparent w-full h-full"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
+        className="flex flex-col bg-white/95 backdrop-blur-sm w-full max-w-md rounded-t-lg shadow-xl overflow-hidden"
+        initial={{ y: 50 }}
+        animate={{ 
+          y: 0,
+          transition: { duration: 0.2 }
+        }}
+        drag="y"
+        dragConstraints={{ top: 0, bottom: 0 }}
+        onDrag={handleDrag}
+        dragElastic={0.03} // Even less elasticity for snappier feel
+        style={{ y, originY: 1, willChange: "transform" }}
+        dragDirectionLock
+        dragMomentum={false}
+        dragTransition={{ power: 0.2, timeConstant: 50 }}
       >
-        {/* Compact header with destination */}
-        <div className="bg-green-50 p-3 border-b border-gray-100 rounded-t-lg">
-          <div className="flex items-center gap-2">
-            <MapPin className="text-green-600" size={18} />
-            <h2 className="text-lg font-semibold text-green-800 truncate">{destination.name}</h2>
-          </div>
-          {destination.category && (
-            <span className="text-xs text-green-800 opacity-75 ml-6">{destination.category}</span>
-          )}
+        {/* Drag handle indicator */}
+        <div className="w-full flex justify-center py-1.5 cursor-grab active:cursor-grabbing touch-none">
+          <div className="w-12 h-1.5 bg-gray-300 rounded-full" />
         </div>
-        
-        {/* Route stats in a more compact form */}
-        <div className="flex justify-between items-center p-3 border-b border-gray-100 bg-white/50">
-          <div className="flex items-center gap-2">
-            <div className="bg-blue-50 p-2 rounded-full">
-              <Footprints size={16} className="text-blue-500" />
+
+        <div className="border-b border-gray-100">
+          {/* Header row with title */}
+          <div className="flex items-start justify-between p-3">
+            <div className="flex items-center gap-2">
+              <MapPin className="text-green-600" size={isExpanded ? 22 : 18} />
+              <div className="flex flex-col">
+                <h2 
+                  className="font-semibold text-green-800 truncate"
+                  style={{ fontSize: isExpanded ? '1.25rem' : '1.125rem' }}
+                >
+                  {destination.name}
+                </h2>
+                
+                {destination.category && (
+                  <span className="text-xs text-green-800 opacity-75 block">
+                    {destination.category}
+                  </span>
+                )}
+              </div>
             </div>
-            <div>
-              <div className="font-medium">{steps}</div>
-              <div className="text-xs text-gray-500">steps</div>
-            </div>
+            
+            {/* Chips for steps and time - horizontal in collapsed mode */}
+            <AnimatePresence mode="wait" initial={false}>
+              {!isExpanded ? (
+                <motion.div 
+                  key="chips" 
+                  className="flex items-center gap-2"
+                  initial={{ opacity: 0, x: 10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: 10 }}
+                  transition={quickFade}
+                >
+                  <div className="flex items-center gap-1 bg-blue-50 px-2 py-1 rounded-full">
+                    <Footprints size={14} className="text-blue-500" />
+                    <span className="text-xs font-medium text-blue-700">{steps}</span>
+                  </div>
+                  
+                  <div className="flex items-center gap-1 bg-blue-50 px-2 py-1 rounded-full">
+                    <Clock size={14} className="text-blue-500" />
+                    <span className="text-xs font-medium text-blue-700">{time}</span>
+                  </div>
+                </motion.div>
+              ) : null}
+            </AnimatePresence>
           </div>
           
-          <div className="flex items-center gap-2">
-            <div className="bg-blue-50 p-2 rounded-full">
-              <Clock size={16} className="text-blue-500" />
-            </div>
-            <div>
-              <div className="font-medium">{time}</div>
-              <div className="text-xs text-gray-500">min</div>
-            </div>
-          </div>
+          {/* Steps and time - vertical in expanded mode */}
+          <AnimatePresence initial={false}>
+            {isExpanded && (
+              <motion.div 
+                className="px-3 pb-3"
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: 'auto', opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                transition={quickFade}
+              >
+                <div className="flex gap-3">
+                  <div className="flex items-center gap-2 bg-blue-50/80 p-2 rounded-lg flex-1">
+                    <div className="bg-blue-100 p-1.5 rounded-full">
+                      <Footprints size={18} className="text-blue-600" />
+                    </div>
+                    <div>
+                      <div className="font-medium text-blue-800">{steps}</div>
+                      <div className="text-xs text-blue-600">steps</div>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center gap-2 bg-blue-50/80 p-2 rounded-lg flex-1">
+                    <div className="bg-blue-100 p-1.5 rounded-full">
+                      <Clock size={18} className="text-blue-600" />
+                    </div>
+                    <div>
+                      <div className="font-medium text-blue-800">{time}</div>
+                      <div className="text-xs text-blue-600">min</div>
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
         
-        {/* Compact description if available */}
-        {destination.description && (
-          <div className="px-3 py-2 overflow-auto bg-white/30">
-            <p className="text-sm text-gray-600 line-clamp-3">{destination.description}</p>
-          </div>
-        )}
+        {/* Description with conditional rendering */}
+        <AnimatePresence initial={false}>
+          {isExpanded && destination.description && (
+            <motion.div 
+              key="description"
+              className="bg-white/30"
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={quickFade}
+            >
+              <p className="text-base text-gray-600 p-4">
+                {destination.description}
+              </p>
+            </motion.div>
+          )}
+        </AnimatePresence>
         
-        {/* Action buttons in horizontal layout */}
-        <div className="p-3 flex gap-2 mt-auto">
-          <button
-            onClick={onCancel}
-            className="flex-1 py-2 border border-gray-200 rounded-lg text-gray-700 font-medium hover:bg-gray-50 transition-colors bg-white"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={onStartRoute}
-            className="flex-1 py-2 bg-green-500 text-white rounded-lg font-medium flex items-center justify-center gap-1 hover:bg-green-600 transition-colors"
-          >
-            Start <ArrowRight size={16} />
-          </button>
+        {/* Action buttons - fixed at bottom */}
+        <div className="bg-white/90 border-t border-gray-100">
+          <div className={containerPadding + " flex gap-2 w-full"}>
+            <button
+              onClick={onCancel}
+              className={`flex-1 ${buttonPadding} border bg-[#FF000040] border-[#FF000040] rounded-lg text-gray-700 font-medium hover:bg-[#FF000060] active:bg-[#FF000080] active:scale-[0.98] transition-all duration-150`}
+            >
+              Cancel
+            </button>
+            <button
+              onClick={onStartRoute}
+              className={`flex-1 ${buttonPadding} bg-green-500 text-white rounded-lg font-medium flex items-center justify-center gap-1 hover:bg-green-600 active:bg-green-700 active:scale-[0.98] transition-all duration-150`}
+            >
+              Start <ArrowRight size={16} />
+            </button>
+          </div>
         </div>
       </motion.div>
     </div>
