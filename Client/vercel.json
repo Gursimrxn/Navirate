@@ -1,17 +1,8 @@
 {
-  "version": 2,
-  "builds": [
+  "rewrites": [
     {
-      "src": "Client/package.json",
-      "use": "@vercel/static-build",
-      "config": {
-        "installCommand": "npm install --no-optional",
-        "buildCommand": "cd Client && npm install --no-optional && npm run build"
-      }
+      "source": "/(.*)",
+      "destination": "/index.html"
     }
-  ],
-  "routes": [
-    { "handle": "filesystem" },
-    { "src": "/(.*)", "dest": "/Client/dist/$1" }
   ]
 }
