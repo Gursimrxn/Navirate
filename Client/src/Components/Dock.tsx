@@ -14,7 +14,10 @@ interface DockProps {
 
 export const Dock: React.FC<DockProps> = ({
   isOpen,
+  onClose,
   children,
+  currentFloor,
+  setCurrentFloor,
 }) => {
     const [isSearching, setIsSearching] = useState(false);
     const [startId, setStartId] = useState('');
@@ -60,7 +63,10 @@ export const Dock: React.FC<DockProps> = ({
                         exit={{ y: '100%' }}
                         transition={{ type: 'spring', damping: 25, stiffness: 300 }}
                     >
-                        <div className="w-16 h-1 mx-auto my-3 bg-gray-300 rounded-full" />
+                        <div 
+                            className="w-16 h-1 mx-auto my-3 bg-gray-300 rounded-full cursor-pointer" 
+                            onClick={onClose}
+                        />
                         <div className="flex justify-center max-h-[500px]">
                             {children}
                         </div>

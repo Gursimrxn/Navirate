@@ -1,55 +1,73 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { useNavigate } from "react-router-dom"; // Importing useNavigate for navigation
-import ShinyText from "./ShinyText";
 
-const SplashScreen = () => {
-  const navigate = useNavigate(); // Hook to navigate to another page
+// Add an onLoadComplete callback prop and progress props
+interface SplashScreenProps {
+  onLoadComplete?: () => void;
+  progress?: number;
+  isLoading: boolean;
+}
 
+const SplashScreen = ({ onLoadComplete, progress = 0, isLoading }: SplashScreenProps) => {
+  // Track when the animation is complete
+  const [animationComplete, setAnimationComplete] = useState(false);
+  
+  // If both loading and animation are done, trigger the completion callback
   useEffect(() => {
-    // After 2 seconds, navigate to the login page
-    const timer = setTimeout(() => {
-      navigate("/"); // Adjust the path based on your route configuration
-    }, 2000);
+    if (!isLoading && animationComplete && onLoadComplete) {
+      // Short delay for a smooth transition
+      const timer = setTimeout(() => {
+        onLoadComplete();
+      }, 300);
+      return () => clearTimeout(timer);
+    }
+  }, [isLoading, animationComplete, onLoadComplete]);
 
-    // Clear the timer on component unmount
+  // Set animation complete after minimum display time
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setAnimationComplete(true);
+    }, 1800);
     return () => clearTimeout(timer);
-  }, [navigate]);
+  }, []);
+
+  // Helper component for the shiny text effect
+  const ShinyText = ({ text, className = "" }: { text: string, className?: string }) => (
+    <div className={`text-green-700 font-medium mt-4 text-lg relative overflow-hidden ${className}`}>
+      {text}
+      <motion.div
+        className="absolute inset-0 bg-gradient-to-r from-transparent via-white to-transparent opacity-30"
+        animate={{ x: ["100%", "-100%"] }}
+        transition={{ repeat: Infinity, duration: 2, ease: "linear" }}
+      />
+    </div>
+  );
 
   return (
-    <div className="relative flex flex-col items-center justify-center min-h-screen bg-[#E0F2E0]">
+    <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-[#E0F2E0]">
       <motion.img
         src="/logo.svg"
         alt="Navirate Logo"
         className="min-h-20 w-auto"
-        initial={{ scale: 0.3 }} // Start with a small scale
-        animate={{ scale: 0.32 }}  // Scale to normal size
-        transition={{ duration: 2, ease: "anticipate" }} // 1 second zoom-in effect
+        initial={{ scale: 0.3 }}
+        animate={{ scale: 0.32 }}
+        transition={{ duration: 1.8, ease: "anticipate" }}
       />
-      <ShinyText text="Loading..." speed={2} className="animate-shine">
-
-      </ShinyText>
-      {/* Small Loader Filler at Bottom Center */}
-      <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2">
+      
+      <ShinyText text={isLoading ? `Loading ${progress}%...` : "Ready!"} className="animate-shine" />
+      
+      {/* Progress bar based on actual loading progress */}
+      <div className="absolute bottom-16 left-1/2 transform -translate-x-1/2 w-[140px] bg-green-200 rounded-full h-1">
         <motion.div
           className="h-1 bg-green-500 rounded-full"
-          style={{ width: "80px" }} 
+          style={{ width: `${progress}%` }} 
           initial={{ width: 0 }}
-          animate={{ width: "80px" }}
-          transition={{ duration: 2, ease: "linear" }}
+          animate={{ width: `${progress}%` }}
+          transition={{ duration: 0.3 }}
         />
       </div>
     </div>
   );
 };
 
-const Auth = () => {
-  return (
-    <div>
-      <SplashScreen />
-      {/* Login page will be displayed after splash screen */}
-    </div>
-  );
-};
-
-export default Auth;
+export default SplashScreen;

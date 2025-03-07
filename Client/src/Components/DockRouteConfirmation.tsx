@@ -22,8 +22,9 @@ export const DockRouteConfirmation: React.FC<DockRouteConfirmationProps> = ({
   onCancel
 }) => {
   return (
+    <div className="h-full w-full flex items-center justify-center">
       <motion.div 
-        className="flex flex-col bg-transparent w-full max-w-md rounded-lg shadow-xl overflow-hidden"
+        className="flex flex-col bg-transparent w-full h-full"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
@@ -70,7 +71,7 @@ export const DockRouteConfirmation: React.FC<DockRouteConfirmationProps> = ({
         )}
         
         {/* Action buttons in horizontal layout */}
-        <div className="p-3 flex gap-2">
+        <div className="p-3 flex gap-2 mt-auto">
           <button
             onClick={onCancel}
             className="flex-1 py-2 border border-gray-200 rounded-lg text-gray-700 font-medium hover:bg-gray-50 transition-colors bg-white"
@@ -85,5 +86,6 @@ export const DockRouteConfirmation: React.FC<DockRouteConfirmationProps> = ({
           </button>
         </div>
       </motion.div>
+    </div>
   );
 };

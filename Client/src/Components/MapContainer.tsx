@@ -27,12 +27,14 @@ export default function IndoorNavigation({
   currentFloor, 
   setCurrentFloor,
   setDockContent, // Add this prop to control dock content
-  setDockOpen     // Add this prop to control dock visibility
+  setDockOpen,     // Add this prop to control dock visibility
+  preloadedData = null // Add this prop to accept preloaded building data
 }: { 
   currentFloor: string;
   setCurrentFloor: (floor: string) => void;
   setDockContent: (content: React.ReactNode | null) => void;
   setDockOpen: (isOpen: boolean) => void;
+  preloadedData?: any; // Building data that was preloaded
 }) {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
@@ -365,10 +367,18 @@ export default function IndoorNavigation({
 
     const handleLoad = async () => {
       try {
-        const response = await fetch('/test3.geojson');
-        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+        // Use preloaded data if available, otherwise fetch it
+        let data;
+        if (preloadedData) {
+          console.log("Using preloaded building data");
+          data = preloadedData;
+        } else {
+          console.log("Fetching building data");
+          const response = await fetch('/test3.geojson');
+          if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+          data = await response.json();
+        }
         
-        const data: BuildingData = await response.json();
         buildingData.current = data;
         
         if (!mapInstance.isStyleLoaded()) return;
@@ -393,7 +403,7 @@ export default function IndoorNavigation({
       cleanupAnimation();
       mapInstance.remove();
     };
-  }, [cleanupAnimation, initRouteLayer]);
+  }, [cleanupAnimation, initRouteLayer, preloadedData]); // Add preloadedData to dependencies
 
   const handleEmergencyNavigation = useCallback(async () => {
     cleanupAnimation();
