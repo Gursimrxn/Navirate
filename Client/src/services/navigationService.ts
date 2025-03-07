@@ -1,5 +1,4 @@
 import { config } from "../config.ts";
-import { PathPoint } from "../types/navigationTypes";
 import { navigationEvents } from "./eventService";
 
 const BASE_URL = config.apiBaseUrl;
@@ -61,11 +60,7 @@ class NavigationServiceImpl implements NavigationService {
       
       // Ensure path exists and has the right format
       if (!result.path || !Array.isArray(result.path) || result.path.length < 2) {
-        console.error("Invalid path data received:", result);
-        
-        // For testing purposes, create a dummy path if the API doesn't return valid data
-        console.log("Creating dummy test path between the nodes");
-        
+        // Create dummy path if the API doesn't return valid data
         const startNode = await this.getNodeDetails(startId || '5');
         const endNode = await this.getNodeDetails(endId);
         
@@ -101,7 +96,6 @@ class NavigationServiceImpl implements NavigationService {
               }
             }
           ];
-          console.log("Created dummy path:", result.path);
         } else {
           throw new Error("Could not create dummy path - missing node details");
         }
@@ -134,11 +128,10 @@ class NavigationServiceImpl implements NavigationService {
     }
   }
 
-  // New method to get available destinations with descriptions
+  // Simplify getDestinations by removing caching
   async getDestinations(): Promise<Destination[]> {
     try {
-      // In production, this would call an API endpoint
-      // For now, return enhanced static data with descriptions
+      // Return static data directly without caching
       return [
         {
           id: "31",
@@ -155,11 +148,11 @@ class NavigationServiceImpl implements NavigationService {
           floor: "G"
         },
         {
-          id: "5",
-          name: "Exit",
-          category: "exit",
-          description: "Main building exit to parking lot and campus grounds.",
-          floor: "G"
+          id: "32",
+          name: "Lab 201",
+          category: "common",
+          description: "Computer Lab on Turing Block",
+          floor: "1"
         },
         {
           id: "29",
@@ -175,10 +168,10 @@ class NavigationServiceImpl implements NavigationService {
     }
   }
 
-  // Use exact node coordinates from graph.ts
+  // Use exact node coordinates from graph.ts without caching
   async getNodeDetails(nodeId: string) {
     try {
-      // Match coordinates exactly with graph.ts
+      // Direct lookup from the static data without caching
       const nodes = {
         "5":  { name: "Main Door", coordinates: { x: 76.66057423511904, y: 30.516562768022, floor: "G" }},
         "6":  { name: "Main Entrance", coordinates: { x: 76.66057391235302, y: 30.51655136768173, floor: "G" }},
@@ -198,25 +191,30 @@ class NavigationServiceImpl implements NavigationService {
   // Method to estimate route information (steps and time)
   async estimateRouteInfo(startId: string, endId: string): Promise<{steps: number, time: string}> {
     try {
-      // In a real implementation, this would make a lightweight API call
-      // to get route information without full path calculation
-      
-      // For now, we'll calculate a simple estimation based on node coordinates
+      // Get the node details for both start and end points
       const startNode = await this.getNodeDetails(startId || this.BUILDING_ENTRY_ID);
       const endNode = await this.getNodeDetails(endId);
       
       if (startNode && endNode) {
-        // Calculate distance between nodes (very basic)
+        // Calculate distance between nodes 
         const dx = startNode.coordinates.x - endNode.coordinates.x;
         const dy = startNode.coordinates.y - endNode.coordinates.y;
         const distance = Math.sqrt(dx*dx + dy*dy);
         
-        // Estimate steps (rough calculation)
-        const steps = Math.round(distance * 1000);
+        // Convert the distance to meters (approximate conversion)
+        const distanceInMeters = distance * 111000;
         
-        // Estimate time in minutes (rough calculation)
-        // Assuming average walking speed
-        const timeInMinutes = Math.max(1, Math.ceil(distance * 10));
+        // Calculate steps based on average step length (approximately 0.75 meters per step)
+        const averageStepLength = 0.75; // meters
+        const calculatedSteps = Math.round(distanceInMeters / averageStepLength);
+        
+        // Ensure steps is always reasonable (between 20 and 200)
+        const steps = Math.max(20, Math.min(200, calculatedSteps));
+        
+        // Calculate time based on average walking speed (approximately 1.4 meters per second)
+        const walkingSpeed = 1.4; // meters per second
+        const timeInSeconds = distanceInMeters / walkingSpeed;
+        const timeInMinutes = Math.max(1, Math.ceil(timeInSeconds / 60));
         
         return {
           steps: steps,
@@ -224,15 +222,17 @@ class NavigationServiceImpl implements NavigationService {
         };
       }
       
-      // Default values if nodes not found
+      // Default values with more realistic step count
       return {
-        steps: 15,
+        steps: 35,
         time: "2"
       };
     } catch (error) {
-      console.error("Failed to estimate route info:", error);
+      // Keep just one error log as it's essential for troubleshooting
+      console.error("Failed to estimate route info");
+      // Fallback values
       return {
-        steps: 15,
+        steps: 35,
         time: "2"
       };
     }

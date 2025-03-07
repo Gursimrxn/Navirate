@@ -70,9 +70,10 @@ export class PreloadService {
     }
   }
 
-  // Load building geometry data
+  // Load building geometry data - simplified without caching
   private async preloadBuildingData(): Promise<void> {
     try {
+      // Fetch directly from network
       const response = await fetch('/test3.geojson');
       if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
       
@@ -80,19 +81,19 @@ export class PreloadService {
       this.loadedResources.set('buildingData', data);
       this.updateProgress();
     } catch (error) {
-      console.error('Failed to preload building data:', error);
+      // Keep this error log for critical preloading issues
+      console.error('Failed to preload building data');
       this.updateProgress(); // Still update progress even on failure
     }
   }
 
-  // Load destinations data
+  // Load destinations data - simplified without caching
   private async preloadDestinations(): Promise<void> {
     try {
       const destinations = await navigationService.getDestinations();
       this.loadedResources.set('destinations', destinations);
       this.updateProgress();
     } catch (error) {
-      console.error('Failed to preload destinations:', error);
       this.updateProgress();
     }
   }
@@ -170,7 +171,6 @@ export class PreloadService {
       
       this.updateProgress();
     } catch (error) {
-      console.error('Failed to preload map style:', error);
       this.updateProgress();
     }
   }
