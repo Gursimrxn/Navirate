@@ -5,14 +5,12 @@ import { EmergencyPath, navigationEvents } from '../services/eventService';
 import { navigationService } from '../services/navigationService';
 import { PathPoint, BuildingData } from "../types/navigationTypes";
 import { getBearing } from '../utils/navigationUtils';
-// Remove the old RouteConfirmation import and keep only DockRouteConfirmation
 import { DockRouteConfirmation } from './DockRouteConfirmation';
 
 const ANIMATION_DURATION = 2000;
 const CAMERA_MOVE_DURATION = 1500;
 const DRAW_DELAY = 500;
 
-// Smooth easing function
 const easeOutQuart = (x: number): number => {
   return 1 - Math.pow(1 - x, 4);
 };
@@ -26,28 +24,27 @@ mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN;
 export default function IndoorNavigation({ 
   currentFloor, 
   setCurrentFloor,
-  setDockContent, // Add this prop to control dock content
-  setDockOpen,     // Add this prop to control dock visibility
-  preloadedData = null // Add this prop to accept preloaded building data
+  setDockContent,
+  setDockOpen,
+  preloadedData = null,
+  isOnline = true
 }: { 
   currentFloor: string;
   setCurrentFloor: (floor: string) => void;
   setDockContent: (content: React.ReactNode | null) => void;
   setDockOpen: (isOpen: boolean) => void;
-  preloadedData?: any; // Building data that was preloaded
+  preloadedData?: any;
+  isOnline?: boolean;
 }) {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
-  // Always set the default startId to 5 (building entry)
   const [startId, setStartId] = useState("5");
-  const [endId, setEndId] = useState("");
+  // endId is managed via confirmationDestination.id instead
   const animationRef = useRef<number | null>(null);
   const latestPath = useRef<PathPoint[]>([]);
   const buildingData = useRef<BuildingData | null>(null);
   const [isAnimating, setIsAnimating] = useState(false);
   const [isEmergency, setIsEmergency] = useState(false);
-  // Remove this line: const [showConfirmation, setShowConfirmation] = useState(false);
-  // Update the type definition to include category
   const [confirmationDestination, setConfirmationDestination] = useState<{
     id: string, 
     name: string,
@@ -61,10 +58,8 @@ export default function IndoorNavigation({
     time: "2"
   });
 
-  // Add a state to track when to show the route confirmation
   const [shouldShowConfirmation, setShouldShowConfirmation] = useState(false);
 
-  // Helper to get destination descriptions - move this higher up
   const getDestinationDescription = (destination: any) => {
     const descriptions: Record<string, string> = {
       'facilities': 'Public facilities available for all visitors.',
@@ -79,7 +74,6 @@ export default function IndoorNavigation({
       `Location inside the building. Navigate here using the map.`;
   };
 
-  // Helper functions that don't depend on other callbacks
   const initRouteLayer = useCallback((mapInstance: mapboxgl.Map) => {
     try {
       if (mapInstance.getSource('route')) {
@@ -111,7 +105,6 @@ export default function IndoorNavigation({
           'line-width': 6,
           'line-opacity': ['get', 'opacity']
         },
-        // Make sure it renders on top of everything
         minzoom: 0,
         maxzoom: 22
       });
@@ -125,7 +118,6 @@ export default function IndoorNavigation({
   const generateRouteFeatures = useCallback((path: PathPoint[], floor: string, emergency: boolean) => {
     return path.slice(0, -1).map((p1, i) => {
       const p2 = path[i + 1];
-      // More robust floor comparison - handle null/undefined and standardize format
       const pathFloor = (p1.coordinates.floor || "").toLowerCase();
       const currentMapFloor = (floor || "").toLowerCase();
       const isCurrent = pathFloor === currentMapFloor;
@@ -139,7 +131,7 @@ export default function IndoorNavigation({
         properties: {
           color: emergency ? '#FF0000' : (isCurrent ? '#30A953' : 'gray'),
           opacity: isCurrent ? 1 : 0.3,
-          floor: p1.coordinates.floor // Store floor for debugging
+          floor: p1.coordinates.floor
         }
       };
     });
@@ -149,17 +141,14 @@ export default function IndoorNavigation({
     if (!latestPath.current.length || !map.current) return;
     
     try {
-      // Ensure route source exists
       if (!map.current.getSource('route')) {
         console.log("Route source missing, initializing route layer");
         initRouteLayer(map.current);
-        // Return early and let the sourcedata event trigger another update
         return;
       }
       
       const features = generateRouteFeatures(latestPath.current, currentFloor, isEmergency);
       
-      // Ensure we have the correct source before updating
       if (map.current.getSource('route')) {
         (map.current.getSource('route') as mapboxgl.GeoJSONSource).setData({
           type: 'FeatureCollection',
@@ -189,16 +178,13 @@ export default function IndoorNavigation({
         !map.current.getLayer('wallsFill') ||
         !map.current.getLayer('wallsOutline')
       ) {
-        // Try again after the map is fully loaded
         setTimeout(updateFloorFilter, 100);
         return;
       }
 
-      // Set filters with normalized case
       const floorValue = currentFloor.toLowerCase();
       console.log(`Setting wall filters to floor: ${floorValue} (from ${currentFloor})`);
       
-      // Apply filter to walls - more robust with error handling
       try {
         map.current.setFilter('wallsFill', ['==', ['get', 'floor'], currentFloor]);
         map.current.setFilter('wallsOutline', ['==', ['get', 'floor'], currentFloor]);
@@ -206,7 +192,6 @@ export default function IndoorNavigation({
         console.error("Error updating wall filters:", err);
       }
       
-      // Use throttled update for routes
       updateRouteColors();
       
     } catch (error) {
@@ -221,14 +206,12 @@ export default function IndoorNavigation({
     }
 
     console.log("Animating route with path length:", path.length);
-    cleanupAnimation(); // Ensure clean state before starting
+    cleanupAnimation();
 
     try {
-      // Reset view to starting position with easing
       const startPoint = path[0].coordinates;
       const nextPoint = path[1].coordinates;
       
-      // Ensure map is properly positioned
       map.current.easeTo({
         center: [startPoint.x, startPoint.y - 0.00025],
         bearing: getBearing(startPoint.y, startPoint.x, nextPoint.y, nextPoint.x),
@@ -245,17 +228,14 @@ export default function IndoorNavigation({
         const elapsed = currentTime - startTime;
         const rawProgress = Math.min((elapsed - DRAW_DELAY) / ANIMATION_DURATION, 1);
         
-        // Enhanced easing for ultra-smooth animation
         const progress = rawProgress < 0 ? 0 : easeOutQuart(rawProgress);
         const totalLength = path.length - 1;
         const exactSegment = progress * totalLength;
         const currentSegment = Math.floor(exactSegment);
         const segmentProgress = exactSegment - currentSegment;
 
-        // Generate features for the route animation
         const animatedFeatures = generateAnimatedFeatures(path, currentSegment, segmentProgress);
 
-        // Update the route on the map
         try {
           (map.current?.getSource('route') as mapboxgl.GeoJSONSource)?.setData({
             type: 'FeatureCollection',
@@ -271,7 +251,6 @@ export default function IndoorNavigation({
           console.log("Animation complete");
           setIsAnimating(false);
           updateRouteColors();
-          // Only complete non-emergency navigation
           if (!isEmergency) {
             navigationService.completeNavigation();
           }
@@ -281,7 +260,6 @@ export default function IndoorNavigation({
       setIsAnimating(true);
       rafId = requestAnimationFrame(animate);
       
-      // Store animation reference for cleanup
       animationRef.current = rafId;
     } catch (err) {
       console.error("Error in route animation:", err);
@@ -295,12 +273,10 @@ export default function IndoorNavigation({
   ): GeoJSON.Feature[] => {
     const animatedFeatures: GeoJSON.Feature[] = [];
 
-    // Draw completed segments with normalized floor comparison
     for (let i = 0; i < currentSegment; i++) {
       const p = path[i];
       const next = path[i + 1];
       
-      // Normalize floor comparison
       const pathFloor = (p.coordinates.floor || "").toLowerCase();
       const mapFloor = (currentFloor || "").toLowerCase();
       const isCurrentFloor = pathFloor === mapFloor;
@@ -314,22 +290,19 @@ export default function IndoorNavigation({
         properties: {
           color: isEmergency ? '#FF0000' : (isCurrentFloor ? '#30A953' : 'gray'),
           opacity: isCurrentFloor ? 1 : 0.3,
-          floor: p.coordinates.floor // Store floor for debugging
+          floor: p.coordinates.floor
         }
       });
     }
 
-    // Add current animating segment with normalized floor comparison
     if (currentSegment < path.length - 1) {
       const p = path[currentSegment];
       const next = path[currentSegment + 1];
       
-      // Normalize floor comparison
       const pathFloor = (p.coordinates.floor || "").toLowerCase();
       const mapFloor = (currentFloor || "").toLowerCase();
       const isCurrentFloor = pathFloor === mapFloor;
       
-      // Smooth interpolation between points
       const interpolatedPoint = {
         x: p.coordinates.x + (next.coordinates.x - p.coordinates.x) * segmentProgress,
         y: p.coordinates.y + (next.coordinates.y - p.coordinates.y) * segmentProgress
@@ -344,7 +317,7 @@ export default function IndoorNavigation({
         properties: {
           color: isEmergency ? '#FF0000' : (isCurrentFloor ? '#30A953' : 'gray'),
           opacity: isCurrentFloor ? 1 : 0.3,
-          floor: p.coordinates.floor // Store floor for debugging
+          floor: p.coordinates.floor
         }
       });
     }
@@ -367,7 +340,6 @@ export default function IndoorNavigation({
 
     const handleLoad = async () => {
       try {
-        // Use preloaded data if available, otherwise fetch it
         let data;
         if (preloadedData) {
           console.log("Using preloaded building data");
@@ -403,7 +375,7 @@ export default function IndoorNavigation({
       cleanupAnimation();
       mapInstance.remove();
     };
-  }, [cleanupAnimation, initRouteLayer, preloadedData]); // Add preloadedData to dependencies
+  }, [cleanupAnimation, initRouteLayer, preloadedData]);
 
   const handleEmergencyNavigation = useCallback(async () => {
     cleanupAnimation();
@@ -466,16 +438,13 @@ export default function IndoorNavigation({
     }
   };
 
-  // Add marker to map with improved positioning
   const addDestinationMarker = useCallback((coordinates: {x: number, y: number, floor: string}) => {
     if (!map.current) return;
     
-    // Remove existing marker if there is one
     if (destinationMarker.current) {
       destinationMarker.current.remove();
     }
     
-    // Create marker element with improved visibility
     const markerElement = document.createElement('div');
     markerElement.className = 'destination-marker';
     markerElement.innerHTML = `
@@ -484,19 +453,15 @@ export default function IndoorNavigation({
       </div>
     `;
     
-    // Log coordinates for debugging
     console.log("Adding marker at coordinates:", coordinates);
     
-    // Add marker to map
     destinationMarker.current = new mapboxgl.Marker(markerElement)
       .setLngLat([coordinates.x, coordinates.y])
       .addTo(map.current);
       
-    // Make sure marker is visible on correct floor
     setCurrentFloor(coordinates.floor);
   }, [setCurrentFloor]);
 
-  // Remove marker
   const removeDestinationMarker = useCallback(() => {
     if (destinationMarker.current) {
       destinationMarker.current.remove();
@@ -504,13 +469,12 @@ export default function IndoorNavigation({
     }
   }, []);
   
-  // Add reliable floor change handling for destination selection
   const selectDestination = useCallback(async (startId: string, endId: string) => {
     try {
       console.log("Selecting destination:", startId, endId);
       
       setStartId(startId);
-      setEndId(endId);
+      // No longer need to set endId separately as it's part of confirmationDestination
       
       const destinations = await navigationService.getDestinations();
       const destination = destinations.find(d => d.id === endId);
@@ -526,7 +490,17 @@ export default function IndoorNavigation({
       }
 
       const estimatedRoute = await navigationService.estimateRouteInfo(startId, endId);
-      setRouteInfo(estimatedRoute);
+      
+      const steps = Math.max(20, estimatedRoute.steps || 50);
+      console.log("Estimated steps:", estimatedRoute.steps, "=>", steps);
+      const time = estimatedRoute.time || "2";
+      
+      setRouteInfo({
+        steps: steps,
+        time: time
+      });
+      
+      console.log("Route info set:", {steps, time});
       
       console.log("Selected destination:", destination.name, nodeDetails.coordinates);
       
@@ -534,7 +508,6 @@ export default function IndoorNavigation({
         setCurrentFloor(nodeDetails.coordinates.floor);
       }
       
-      // Show marker and center map
       setTimeout(() => {
         addDestinationMarker(nodeDetails.coordinates);
         
@@ -546,7 +519,6 @@ export default function IndoorNavigation({
           duration: 2000
         });
         
-        // Store destination info but don't show confirmation yet
         setConfirmationDestination({
           id: endId,
           name: destination.name,
@@ -555,9 +527,19 @@ export default function IndoorNavigation({
           coordinates: nodeDetails.coordinates
         });
         
-        // Signal that confirmation should be shown
         setShouldShowConfirmation(true);
       }, 300);
+
+      if (!isOnline) {
+        const offlineNote = ' (Offline mode - some features limited)';
+        setConfirmationDestination(prevState => {
+          if (!prevState) return null;
+          return {
+            ...prevState,
+            description: (prevState.description || '') + offlineNote
+          };
+        });
+      }
     } catch (err) {
       console.error('Error showing destination:', err);
     }
@@ -566,18 +548,11 @@ export default function IndoorNavigation({
     setCurrentFloor,
     addDestinationMarker,
     setRouteInfo,
-    setConfirmationDestination
+    setConfirmationDestination,
+    isOnline
   ]);
 
-  // Use an effect to show the dock confirmation when needed
-  
 
-  // Update destination handler to use the new approach
-  const handleDestinationSelect = useCallback((startId: string, endId: string) => {
-    selectDestination(startId, endId);
-  }, [selectDestination]);
-
-  // Direct route rendering function to use when animation fails
   const renderFullPath = useCallback((path: PathPoint[]) => {
     console.log("Rendering full path directly");
     if (!map.current || !path.length || !map.current.getSource('route')) return;
@@ -605,7 +580,6 @@ export default function IndoorNavigation({
         features
       });
       
-      // Make sure layer is visible
       if (map.current.getLayer('route')) {
         map.current.setLayoutProperty('route', 'visibility', 'visible');
       }
@@ -613,115 +587,15 @@ export default function IndoorNavigation({
       console.error("Failed to render full path:", err);
     }
   }, [isEmergency]);
-
-  // Improved calculateRoute to handle floor setting better
-  const calculateRoute = useCallback(async () => {
-    console.log("Starting route calculation:", startId || "5", "to", endId);
-    cleanupAnimation();
-    removeDestinationMarker();
-
-    const actualStartId = startId || "5"; // Use building entry (5) as fallback
-
-    if (!endId) {
-      console.error('End ID missing');
-      return;
-    }
-    
-    if (!map.current) {
-      console.error('Map not initialized');
-      return;
-    }
-
-    try {
-      // Make sure map and style are fully loaded
-      const ensureMapReady = () => {
-        return new Promise<void>((resolve) => {
-          if (map.current?.isStyleLoaded()) {
-            resolve();
-          } else {
-            console.log("Waiting for map style to load...");
-            map.current?.once('styledata', () => resolve());
-          }
-        });
-      };
-      
-      await ensureMapReady();
-      
-      // Make sure route layer exists
-      if (!map.current.getSource('route')) {
-        console.log("Initializing route layer");
-        initRouteLayer(map.current);
-      }
-      
-      // Clear any existing route data
-      if (map.current.getSource('route')) {
-        (map.current.getSource('route') as mapboxgl.GeoJSONSource).setData({
-          type: 'FeatureCollection',
-          features: []
-        });
-      }
-      
-      // Fetch the route data
-      console.log("Fetching route data...");
-      const result = await navigationService.calculateRoute(actualStartId, endId);
-      
-      if (!result?.path?.length) {
-        throw new Error('No valid path found');
-      }
-      
-      console.log(`Got path with ${result.path.length} points`, result.path);
-      
-      // Store the path data
-      latestPath.current = result.path;
-      
-      // Get the floor of the first segment and set it
-      const startingFloor = result.path[0].coordinates.floor;
-      console.log(`Setting current floor to path's starting floor: ${startingFloor}`);
-      setCurrentFloor(startingFloor);
-      
-      // Wait for floor change to apply
-      await new Promise(resolve => setTimeout(resolve, 300));
-      
-      // Force a route update to ensure correct coloring
-      updateRouteColors();
-      
-      // Try to animate the path
-      console.log("Starting animation...");
-      try {
-        animateRoute(result.path);
-      } catch (animationError) {
-        // Fallback to direct rendering if animation fails
-        console.error("Animation failed, falling back to direct rendering:", animationError);
-        renderFullPath(result.path);
-      }
-    } catch (err) {
-      console.error('Route calculation failed:', err);
-      // Try to show an error message or UI feedback here
-    }
-  }, [
-    startId, 
-    endId, 
-    cleanupAnimation, 
-    removeDestinationMarker, 
-    setCurrentFloor, 
-    animateRoute, 
-    initRouteLayer,
-    renderFullPath,
-    updateRouteColors
-  ]);
   
-  // Handle confirmation response with more reliable tracking
   const handleStartRoute = useCallback(() => {
     if (!confirmationDestination) return;
 
-    // First close the dock
     setDockOpen(false);
     setDockContent(null);
 
-    // Flag to track if calculation already started
     let calculationStarted = false;
     
-    // Calculate route with short delay for UI updates
     setTimeout(() => {
       if (calculationStarted) return;
       calculationStarted = true;
@@ -766,8 +640,7 @@ export default function IndoorNavigation({
     animateRoute, 
     renderFullPath
   ]);
-
-  // Handle cancellation - doesn't depend on other functions
+  
   const handleCancelNavigation = useCallback(() => {
     setDockOpen(false);
     setDockContent(null);
@@ -777,7 +650,6 @@ export default function IndoorNavigation({
   useEffect(() => {
     if (shouldShowConfirmation && confirmationDestination) {
       const showConfirmation = () => {
-        // Create dock content
         const content = (
           <DockRouteConfirmation
             destination={{
@@ -794,10 +666,9 @@ export default function IndoorNavigation({
         
         setDockContent(content);
         setDockOpen(true);
-        setShouldShowConfirmation(false); // Reset flag
+        setShouldShowConfirmation(false);
       };
       
-      // Short delay for smoother UI
       setTimeout(showConfirmation, 1000);
     }
   }, [
@@ -809,26 +680,23 @@ export default function IndoorNavigation({
     setDockContent,
     setDockOpen
   ]);
-  // Fix dependency list to include all required dependencies
+
   useEffect(() => {
     const unsubscribe = navigationEvents.subscribe((start, endIdOrPath: string | EmergencyPath) => {
       console.log("Navigation event received:", start || "5", endIdOrPath);
       
       if (typeof endIdOrPath === 'string') {
-        // Make sure we always have a valid startId, defaulting to building entry (5)
         const actualStartId = start || "5";
         console.log(`Setting start=${actualStartId}, end=${endIdOrPath}`);
         setStartId(actualStartId);
-        setEndId(endIdOrPath);
+        // No longer using setEndId directly
         setIsEmergency(false);
         
-        // Ensure any previous navigation is cleaned up
         cleanupAnimation();
         removeDestinationMarker();
         
         selectDestination(actualStartId, endIdOrPath);
       } else if (endIdOrPath.type === "emergency") {
-        // For emergency, use current location or default to building entry
         setStartId(start || "5");
         handleEmergencyNavigation();
       }
@@ -838,7 +706,6 @@ export default function IndoorNavigation({
       unsubscribe();
       cleanupAnimation();
       removeDestinationMarker();
-      // Close the dock on cleanup if it's open
       setDockOpen(false);
       setDockContent(null);
     };
@@ -849,9 +716,8 @@ export default function IndoorNavigation({
     removeDestinationMarker,
     setDockOpen,
     setDockContent
-  ]); // Add missing dependencies
+  ]);
 
-  // Add a check for route visibility after map style data changes
   useEffect(() => {
     if (!map.current) return;
     
@@ -863,7 +729,6 @@ export default function IndoorNavigation({
         initRouteLayer(map.current!);
       }
       
-      // Force route update when map style changes
       setTimeout(() => {
         updateRouteColors();
       }, 100);
@@ -876,7 +741,6 @@ export default function IndoorNavigation({
     };
   }, [initRouteLayer, updateRouteColors]);
 
-  // Make sure floor changes are logged and properly applied
   useEffect(() => {
     if (!map.current) return;
     
@@ -890,9 +754,7 @@ export default function IndoorNavigation({
       
       cleanupAnimation(); 
       
-      // Make sure this function runs and properly filters layers
       try {
-        // Apply floor filters with exact case matching
         if (map.current.getLayer('wallsFill')) {
           map.current.setFilter('wallsFill', ['==', ['get', 'floor'], currentFloor]);
         }
@@ -901,10 +763,8 @@ export default function IndoorNavigation({
           map.current.setFilter('wallsOutline', ['==', ['get', 'floor'], currentFloor]);
         }
         
-        // Force update route colors to match new floor
         updateRouteColors();
         
-        // Log the filter conditions to verify
         console.log(`Applied floor filter: '${currentFloor}'`);
       } catch (error) {
         console.error("Error updating floor filters:", error);
@@ -917,7 +777,9 @@ export default function IndoorNavigation({
   return (
     <div className="relative top-0 w-full h-screen">
       <div ref={mapContainer} className="w-full h-full" />
-      {/* Remove any old route confirmation UI - it's now in the dock */}
+      {isAnimating && <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-primary text-white px-4 py-2 rounded-full">
+        Navigating...
+      </div>}
     </div>
   );
 };

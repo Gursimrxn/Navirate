@@ -1,9 +1,8 @@
 import { motion } from "framer-motion";
-import { Search, Play, ArrowLeft } from "lucide-react";
+import { Search, ArrowLeft } from "lucide-react";
 import { useState, useEffect } from "react";
 import { navigationService, Destination } from "../services/navigationService";
 import { navigationEvents } from "../services/eventService";
-import { RouteConfirmation } from "./RouteConfirmation";
 
 interface SearchBarProps {
   onClose: () => void;
@@ -43,14 +42,8 @@ const SearchBar = ({
   startId,
 }: SearchBarProps) => {
   const [searchQuery, setSearchQuery] = useState("");
-  const [showConfirmation, setShowConfirmation] = useState(false);
   const [destinations, setDestinations] = useState<(Destination & DestinationUI)[]>([]);
-  const [selectedDestination, setSelectedDestination] = useState<Destination | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [routeInfo, setRouteInfo] = useState<{steps: number, time: string}>({
-    steps: 0, 
-    time: "0"
-  });
 
   // Fetch destinations when component mounts
   useEffect(() => {
@@ -98,56 +91,23 @@ const SearchBar = ({
     );
     
     if (destination) {
-      setSelectedDestination(destination);
-      setShowConfirmation(true);
+      // Directly navigate instead of showing confirmation
+      handleNavigation(destination.id);
     } else {
       // Could show a "no results found" message here
       console.log("No matching destination found");
     }
   };
 
-  const handleStartRoute = () => {
-    if (selectedDestination) {
-      handleNavigation(selectedDestination.id);
-    }
-  };
-
-  // Calculate route information when a destination is selected
+  // Calculate route information and directly navigate
   const handleSelectDestination = async (destination: Destination & DestinationUI) => {
-    setSelectedDestination(destination);
-    
     try {
-      // Get estimated route info before showing confirmation
-      // This pre-calculates the route to get steps and time info
-      const routeEstimation = await navigationService.estimateRouteInfo(startId, destination.id);
-      
-      setRouteInfo({
-        steps: routeEstimation.steps || Math.floor(Math.random() * 10) + 10, // Fallback to random number between 10-20
-        time: routeEstimation.time || Math.ceil(Math.random() * 3).toString() // Fallback to random number between 1-3
-      });
+      handleNavigation(destination.id);
     } catch (error) {
       console.error("Failed to estimate route:", error);
-      // Fallback values if estimation fails
-      setRouteInfo({
-        steps: Math.floor(Math.random() * 10) + 10,
-        time: Math.ceil(Math.random() * 3).toString()
-      });
+      handleNavigation(destination.id);
     }
-    
-    setShowConfirmation(true);
   };
-
-  if (showConfirmation && selectedDestination) {
-    return (
-      <RouteConfirmation
-        destination={selectedDestination.name}
-        steps={routeInfo.steps}
-        time={routeInfo.time}
-        onStartRoute={handleStartRoute}
-        onDiscard={() => setShowConfirmation(false)}
-      />
-    );
-  }
 
   // Filter destinations based on search query
   const filteredDestinations = searchQuery.trim() ? 
@@ -188,9 +148,11 @@ const SearchBar = ({
           />
           <button 
             onClick={handleSearch} 
-            className="bg-green-500 px-3 py-1 rounded-full text-white"
+            className="bg-green-500 p-2 rounded-full text-white"
           >
-            <Play size={16} />
+            <svg width="16" height="16" viewBox="0 0 12 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M0.333333 0.896973C0.3895 0.896973 0.44476 0.911166 0.493973 0.938233L12.8023 7.70779C12.9636 7.79652 13.0225 7.99919 12.9337 8.16052C12.9033 8.21592 12.8577 8.26152 12.8023 8.29199L0.493973 15.0615C0.332667 15.1503 0.12998 15.0914 0.0412599 14.9301C0.0141933 14.8809 0 14.8257 0 14.7695V1.23031C0 1.04621 0.14924 0.896973 0.333333 0.896973ZM1.33333 2.92158V7.33319H4.66667V8.66652H1.33333V13.0782L10.5666 7.99985L1.33333 2.92158Z" fill="white"/>
+            </svg>
           </button>
         </div>
 

@@ -15,13 +15,13 @@ export const FloorSwitcher: React.FC<FloorSwitcherProps> = ({
   const floors = ['2', '1', 'G']; // Add all floors your building has
 
   return (
-    <div className={`flex flex-col bg-white rounded-lg shadow-lg z-50 ${className}`}>
+    <div className={`flex flex-col bg-white rounded-full p-1 gap-2 shadow-lg z-50 ${className}`}>
       {floors.map((floor) => (
         <motion.button
           key={floor}
           onClick={() => setCurrentFloor(floor)}
-          className={`p-3 w-12 h-12 flex items-center justify-center 
-            ${currentFloor === floor ? 'bg-green-500 text-white font-bold' : 'hover:bg-gray-100'}`}
+          className={`p-3 w-12 h-12 flex items-center justify-center rounded-full bg-[#30A9531A] 
+            ${currentFloor === floor ? 'bg-green-500 text-white font-bold' : ' hover:bg-gray-100'}`}
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
         >

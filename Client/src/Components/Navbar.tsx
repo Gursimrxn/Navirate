@@ -107,7 +107,7 @@ export const Navbar = () => {
   const [destinations, setDestinations] = useState<Destination[]>([]);
   const [navigationMessage, setNavigationMessage] = useState("Continue 12 feet");
   // Always default to building entry
-  const [currentLocation, setCurrentLocation] = useState("5");
+  const currentLocation = "5";
   const [isLoading, setIsLoading] = useState(true);
 
   // Fetch destinations from API on component mount
@@ -181,7 +181,7 @@ export const Navbar = () => {
   return (
     <div className="fixed z-20 mt-12 w-full">
       <motion.div
-        className="w-xl flex justify-evenly mx-auto rounded-full shadow-2xl px-3 p-2 bg-white"
+        className="w-xl flex justify-between mx-auto rounded-full shadow-2xl px-3 p-2 bg-white"
         initial={{ y: -100, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ duration: 0.5, type: "spring" }}
@@ -193,12 +193,12 @@ export const Navbar = () => {
             animate={{ opacity: 1 }}
             key="navigating">
             <div className="flex items-center gap-2">
-              <motion.div className="flex items-center justify-center bg-black/10 rounded-full py-2.5 px-2.5">
+              <motion.div className="flex items-center justify-center transition-colors ease rounded-full py-2.5 px-2.5">
                 <svg width="24" height="24" fill="none">
                   <path d="M2 12h16M14 10l4 2-4 2" stroke="green" strokeWidth="2" />
                 </svg>
               </motion.div>
-              <span className="font-satoshi text-base font-normal">{navigationMessage}</span>
+              <span className="text-base">{navigationMessage}</span>
             </div>
             <button 
               onClick={handleCancelNavigation}
@@ -226,7 +226,7 @@ export const Navbar = () => {
                   key={dest.id}
                   whileTap={{ scale: 0.98 }}
                   transition={{ duration: 0.1 }}
-                  className="flex items-center justify-center bg-black/10 rounded-full py-2.5 px-2.5 gap-1 cursor-pointer hover:bg-black/15"
+                  className="flex items-center justify-center transition-colors ease rounded-full py-2.5 px-2.5 gap-1 cursor-pointer hover:bg-black/15"
                   onClick={() => handleNavigationRequest(dest)}
                 >
                   {getIconForDestination(dest.name)}
@@ -242,20 +242,10 @@ export const Navbar = () => {
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
           transition={{ duration: 0.1 }}
-          className="cursor-pointer"
+          className="flex justify-center items-center  bg-[#FFC9C9] w-[45px] rounded-full cursor-pointer"
         >
-          <svg
-            width="44"
-            height="44"
-            viewBox="0 0 45 45"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <rect x="0.682617" y="0.697754" width="43.6195" height="43.6195" rx="21.8098" fill="#FFC9C9" />
-            <path
-              d="M22.4923 12.5491C23.023 12.5491 23.4721 12.7904 23.8396 13.273C24.2239 13.7386 24.416 14.3647 24.416 15.1512C24.416 15.7943 24.2748 16.3288 23.9923 16.7549C23.7267 17.1639 23.3337 17.3685 22.8131 17.3685C22.2997 17.3685 21.9051 17.1844 21.6293 16.8162C21.3536 16.4309 21.2156 15.8866 21.2156 15.1832C21.2156 14.523 21.3705 14.0061 21.6802 13.6325C22.0069 13.2436 22.408 12.5491 22.4923 12.5491ZM24.9632 32.846H19.7595V30.5487C20.1099 30.4421 20.4874 30.2972 20.8919 30.114C21.3133 29.9308 21.6887 29.7476 22.0183 29.5644V23.6144H20.9939L19.7595 24.6107V22.2648C20.148 22.1582 20.6474 21.9963 21.2577 21.7793C21.8849 21.5452 22.3502 21.3688 22.6533 21.2499H25.0141V29.5644C25.3608 29.7645 25.7416 29.9476 26.1529 30.114C26.5643 30.2972 26.9553 30.4421 27.3159 30.5487V32.846H24.9632Z"
-              fill="#FF4747"
-            />
+          <svg width="30" height="30" viewBox="0 0 30 30" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12.2759 11.4187L10.0815 12.2173V16.4674H7.68317V10.5314H7.70118L14.019 8.23196C14.3116 8.11933 14.6291 8.06305 14.956 8.07406C16.2888 8.10683 17.4592 8.9805 17.8663 10.2561C18.0897 10.9563 18.2936 11.4289 18.4777 11.6737C19.5717 13.1283 21.3123 14.069 23.2726 14.069V16.4674C20.6648 16.4674 18.3347 15.2782 16.7951 13.4126L16.0979 17.3664L18.4759 19.6692V28.4593H16.0775V21.2812L13.62 18.8983L12.4835 24.0526L4.2168 22.595L4.63326 20.233L10.5381 21.2742L12.2759 11.4187ZM16.6771 7.47351C15.3525 7.47351 14.2787 6.39972 14.2787 5.07513C14.2787 3.75055 15.3525 2.67676 16.6771 2.67676C18.0017 2.67676 19.0755 3.75055 19.0755 5.07513C19.0755 6.39972 18.0017 7.47351 16.6771 7.47351Z" fill="#FF0000"/>
           </svg>
         </motion.div>
       </motion.div>
