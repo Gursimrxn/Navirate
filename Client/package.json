@@ -8,7 +8,7 @@
     "build": "tsc && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "vercel-build": "vite build"
+    "vercel-build": "npm install --force && vite build"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.0.4",
