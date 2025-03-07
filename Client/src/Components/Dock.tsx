@@ -37,31 +37,41 @@ export const Dock: React.FC<DockProps> = ({
 
     // Hide bottom dock when another dock is open
     const shouldShowBottomDock = !isSearching && !isOpen;
+    
+    // Handle animation complete for proper cleanup
+    const handleAnimationComplete = (definition: string) => {
+      if (definition === 'hidden') {
+        // Any cleanup after close animation completes
+      }
+    };
 
     return (
         <>
-            <AnimatePresence>
+            <AnimatePresence mode="wait">
                 {isSearching && (
-                    <SearchBar 
-                        onClose={() => setIsSearching(false)}
-                        startId={startId}
-                        endId={endId}
-                        setStartId={setStartId}
-                        setEndId={setEndId}
-                        onCalculateRoute={handleCalculateRoute}
-                        isAnimating={isAnimating}
-                    />
+                    <motion.div className="z-[999]">
+                        <SearchBar 
+                            onClose={() => setIsSearching(false)}
+                            startId={startId}
+                            endId={endId}
+                            setStartId={setStartId}
+                            setEndId={setEndId}
+                            onCalculateRoute={handleCalculateRoute}
+                            isAnimating={isAnimating}
+                        />
+                    </motion.div>
                 )}
             </AnimatePresence>
 
             <AnimatePresence>
                 {isOpen && (
                     <motion.div
-                        className="mx-auto fixed max-w-md inset-x-0 bottom-0 rounded-t-2xl"
+                        className="mx-auto fixed max-w-md inset-x-0 bottom-0 rounded-t-2xl z-[1000]"
                         initial={{ y: '100%' }}
                         animate={{ y: 0 }}
                         exit={{ y: '100%' }}
                         transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+                        onAnimationComplete={handleAnimationComplete}
                     >
                         <div className="flex justify-center max-h-[500px]">
                             {children}

@@ -46,12 +46,18 @@ export const DockRouteConfirmation: React.FC<DockRouteConfirmationProps> = ({
   const containerPadding = "p-3";
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 flex justify-center z-[999]" ref={containerRef}>
+    <div className="fixed bottom-0 left-0 right-0 flex justify-center z-[1000]" ref={containerRef}>
       <motion.div 
-        className="flex flex-col bg-white backdrop-blur-sm w-full max-w-md rounded-t-lg shadow-xl pb-4 z-[999] overflow-hidden"
-        initial={{ y: 50 }}
+        className="flex flex-col bg-white backdrop-blur-sm w-full max-w-md rounded-t-lg shadow-xl pb-4 overflow-hidden"
+        initial={{ y: 100, opacity: 0 }}
         animate={{ 
-          y: 0,
+          y: 0, 
+          opacity: 1,
+          transition: { type: "spring", stiffness: 500, damping: 30 }
+        }}
+        exit={{ 
+          y: 100, 
+          opacity: 0,
           transition: { duration: 0.2 }
         }}
         drag="y"
@@ -172,20 +178,22 @@ export const DockRouteConfirmation: React.FC<DockRouteConfirmationProps> = ({
         </AnimatePresence>
         
         {/* Action buttons - fixed at bottom */}
-        <div className="bg-white/90 border-t border-gray-100">
+        <div className="bg-white border-t border-gray-100 mt-auto">
           <div className={containerPadding + " flex gap-2 w-full"}>
-            <button
+            <motion.button
               onClick={onCancel}
-              className={`flex-1 ${buttonPadding} border bg-[#FF000040] border-[#FF000040] rounded-lg text-gray-700 font-medium hover:bg-[#FF000060] active:bg-[#FF000080] active:scale-[0.98] transition-all duration-150`}
+              whileTap={{ scale: 0.97 }}
+              className={`flex-1 ${buttonPadding} border bg-[#FF000040] border-[#FF000040] rounded-lg text-gray-700 font-medium hover:bg-[#FF000060] active:bg-[#FF000080] transition-all duration-150`}
             >
               Cancel
-            </button>
-            <button
+            </motion.button>
+            <motion.button
               onClick={onStartRoute}
-              className={`flex-1 ${buttonPadding} bg-green-500 text-white rounded-lg font-medium flex items-center justify-center gap-1 hover:bg-green-600 active:bg-green-700 active:scale-[0.98] transition-all duration-150`}
+              whileTap={{ scale: 0.97 }}
+              className={`flex-1 ${buttonPadding} bg-green-500 text-white rounded-lg font-medium flex items-center justify-center gap-1 hover:bg-green-600 active:bg-green-700 transition-all duration-150`}
             >
               Start <ArrowRight size={16} />
-            </button>
+            </motion.button>
           </div>
         </div>
       </motion.div>
