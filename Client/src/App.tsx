@@ -19,6 +19,30 @@ export default function App() {
     setDockContent(null);
   };
 
+  // Track online/offline status
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
+  
+  // Monitor online/offline status
+  useEffect(() => {
+    const handleOnline = () => {
+      setIsOnline(true);
+      console.log("App is online");
+    };
+    
+    const handleOffline = () => {
+      setIsOnline(false);
+      console.log("App is offline - using cached data");
+    };
+    
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+
   // Use the preload service to load all necessary data
   useEffect(() => {
     // Register progress callback
@@ -49,13 +73,18 @@ export default function App() {
     <BrowserRouter>
       <div className="App">
         <Navbar />
+        {!isOnline && (
+          <div className="fixed top-16 inset-x-0 bg-amber-100 text-amber-800 py-2 px-4 text-center z-50">
+            You are offline. Using cached data.
+          </div>
+        )}
         <IndoorNavigation
           currentFloor={currentFloor}
           setCurrentFloor={setCurrentFloor}
           setDockContent={setDockContent}
           setDockOpen={setIsDockOpen}
-          // Pass preloaded data
           preloadedData={preloadService.getResource('buildingData')}
+          isOnline={isOnline}
         />
         
         <Dock 
@@ -69,7 +98,7 @@ export default function App() {
         <FloorSwitcher 
           currentFloor={currentFloor}
           setCurrentFloor={setCurrentFloor}
-          className="fixed left-4 bottom-32 z-50"
+          className="fixed rounded-full left-4 bottom-32"
         />
       </div>
       
