@@ -46,9 +46,9 @@ export const DockRouteConfirmation: React.FC<DockRouteConfirmationProps> = ({
   const containerPadding = "p-3";
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 flex justify-center" ref={containerRef}>
+    <div className="fixed bottom-0 left-0 right-0 flex justify-center z-[999]" ref={containerRef}>
       <motion.div 
-        className="flex flex-col bg-white/95 backdrop-blur-sm w-full max-w-md rounded-t-lg shadow-xl overflow-hidden"
+        className="flex flex-col bg-white backdrop-blur-sm w-full max-w-md rounded-t-lg shadow-xl pb-4 z-[999] overflow-hidden"
         initial={{ y: 50 }}
         animate={{ 
           y: 0,
@@ -100,14 +100,17 @@ export const DockRouteConfirmation: React.FC<DockRouteConfirmationProps> = ({
                   exit={{ opacity: 0, x: 10 }}
                   transition={quickFade}
                 >
-                  <div className="flex items-center gap-1 bg-blue-50 px-2 py-1 rounded-full">
-                    <Footprints size={14} className="text-blue-500" />
-                    <span className="text-xs font-medium text-blue-700">{steps}</span>
+                  <div className="flex items-center gap-1 bg-green-50 px-3 py-2 rounded-full">
+                    <svg width="10" height="11" viewBox="0 0 10 11" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M1 8.97552H3.75V9.60052C3.75 10.3599 3.13439 10.9755 2.375 10.9755C1.61561 10.9755 1 10.3599 1 9.60052V8.97552ZM3 3.0358C4 3.0358 4.5 4.4755 4.5 5.47552C4.5 5.97552 4.25 6.47552 4 7.22552L3.75 7.97552H1C1 7.47552 0.75 6.72552 0.75 5.47552C0.75 4.2255 1.74891 3.0358 3 3.0358ZM9.027 7.02467L8.91845 7.64017C8.7866 8.38802 8.0734 8.88737 7.32555 8.75552C6.5777 8.62367 6.07835 7.91047 6.21025 7.16262L6.31875 6.54712L9.027 7.02467ZM8.0888 0.827906C9.32085 1.04516 10.098 2.39024 9.88095 3.62125C9.6639 4.85226 9.28745 5.54747 9.20065 6.03987L6.4924 5.56232L6.37645 4.7803C6.26045 3.99829 6.1011 3.46247 6.1879 2.97007C6.36155 1.98526 7.10395 0.654261 8.0888 0.827906Z" fill="black"/>
+                    </svg>
+
+                    <span className="text-xs font-medium">{steps} steps</span>
                   </div>
                   
-                  <div className="flex items-center gap-1 bg-blue-50 px-2 py-1 rounded-full">
-                    <Clock size={14} className="text-blue-500" />
-                    <span className="text-xs font-medium text-blue-700">{time}</span>
+                  <div className="flex items-center gap-1 bg-green-50 px-3 py-2 rounded-full">
+                    <Clock size={14} />
+                    <span className="text-xs font-medium">{ time } {time == "1" ? "minute" : "minutes"}</span>
                   </div>
                 </motion.div>
               ) : null}
@@ -125,23 +128,23 @@ export const DockRouteConfirmation: React.FC<DockRouteConfirmationProps> = ({
                 transition={quickFade}
               >
                 <div className="flex gap-3">
-                  <div className="flex items-center gap-2 bg-blue-50/80 p-2 rounded-lg flex-1">
-                    <div className="bg-blue-100 p-1.5 rounded-full">
-                      <Footprints size={18} className="text-blue-600" />
+                  <div className="flex items-center gap-2 bg-green-50 p-2 rounded-lg flex-1">
+                    <div className="bg-black/5 p-1.5 rounded-full">
+                      <Footprints size={18} />
                     </div>
                     <div>
-                      <div className="font-medium text-blue-800">{steps}</div>
-                      <div className="text-xs text-blue-600">steps</div>
+                      <div className="font-medium ">{steps}</div>
+                      <div className="text-xs ">steps</div>
                     </div>
                   </div>
                   
-                  <div className="flex items-center gap-2 bg-blue-50/80 p-2 rounded-lg flex-1">
-                    <div className="bg-blue-100 p-1.5 rounded-full">
-                      <Clock size={18} className="text-blue-600" />
+                  <div className="flex items-center gap-2 bg-green-50 p-2 rounded-lg flex-1">
+                    <div className="bg-black/5 p-1.5 rounded-full">
+                      <Clock size={18} />
                     </div>
                     <div>
-                      <div className="font-medium text-blue-800">{time}</div>
-                      <div className="text-xs text-blue-600">min</div>
+                      <div className="font-medium ">{time}</div>
+                      <div className="text-xs ">min</div>
                     </div>
                   </div>
                 </div>
