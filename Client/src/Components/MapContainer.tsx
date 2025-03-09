@@ -17,7 +17,7 @@ const easeOutQuart = (x: number): number => {
 
 // const MAP_STYLE = "mapbox://styles/ceiia/cl8a9clfo00n314pmwmsvha8i";
 const MAP_STYLE = "mapbox://styles/mapbox/standard";
-const INITIAL_CENTER: [number, number] = [76.66067, 30.51638];
+const INITIAL_CENTER: [number, number] = [76.66070, 30.51738];
 
 mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN;
 
@@ -213,10 +213,11 @@ export default function IndoorNavigation({
       const nextPoint = path[1].coordinates;
       
       map.current.easeTo({
+        padding: { top: 200, bottom: 200},
         center: [startPoint.x, startPoint.y - 0.00025],
         bearing: getBearing(startPoint.y, startPoint.x, nextPoint.y, nextPoint.x),
-        pitch: 60,
-        zoom: 19.5,
+        pitch: 0,
+        zoom: 19,
         duration: CAMERA_MOVE_DURATION,
         easing: easeOutQuart
       });
@@ -332,7 +333,8 @@ export default function IndoorNavigation({
       container: mapContainer.current,
       style: MAP_STYLE,
       center: INITIAL_CENTER,
-      zoom: 13,
+      zoom: 15.5,
+      bearing: 182,
       antialias: true,
     });
 
@@ -427,8 +429,8 @@ export default function IndoorNavigation({
     map.current?.fitBounds(bounds, {
       padding: { top: 200, bottom: 200 },
       bearing: 182,
-      pitch: 45,
-      duration: 1000
+      pitch: 0,
+      duration: 2000
     });
     if (latestPath.current.length >= 2) {
       const first = latestPath.current[0].coordinates;
@@ -449,7 +451,7 @@ export default function IndoorNavigation({
     markerElement.className = 'destination-marker';
     markerElement.innerHTML = `
       <div class="w-8 h-8 bg-primary rounded-full flex items-center justify-center animate-pulse">
-        <div class="w-5 h-5 bg-white rounded-full"></div>
+        <div class="w-5 h-5 bg-green-300 rounded-full"></div>
       </div>
     `;
     
@@ -512,10 +514,11 @@ export default function IndoorNavigation({
         addDestinationMarker(nodeDetails.coordinates);
         
         map.current?.flyTo({
+          padding: { top: 200, bottom: 200, left: 200, right: 200 },
           center: [nodeDetails.coordinates.x, nodeDetails.coordinates.y],
           zoom: 19,
           pitch: 50,
-          bearing: 0,
+          // bearing: 0,
           duration: 2000
         });
         

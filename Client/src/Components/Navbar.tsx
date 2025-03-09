@@ -182,7 +182,7 @@ export const Navbar = () => {
     <div className="fixed z-20 mt-12 w-full">
       <motion.div
         className="w-xl flex justify-between mx-auto rounded-full shadow-2xl px-3 p-2 bg-white"
-        initial={{ y: -100, opacity: 0 }}
+        initial={{ y: -10, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ duration: 0.5, type: "spring" }}
       >
