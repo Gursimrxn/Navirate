@@ -81,7 +81,7 @@ const getIconForDestination = (name: string): ReactElement => {
             />
           </g>
           <defs>
-            <clipPath id="clip0_321_2073">
+            <clipPath id="clip0_321_2073)">
               <rect width="15.3951" height="15.3951" fill="white" transform="translate(0.28418 0.80957)" />
             </clipPath>
           </defs>
@@ -181,7 +181,7 @@ export const Navbar = () => {
   return (
     <div className="fixed z-20 mt-12 w-full">
       <motion.div
-        className="w-xl flex justify-between mx-auto rounded-full shadow-2xl px-3 p-2 bg-white"
+        className="max-w-xl w-[95%] flex justify-between mx-auto rounded-full shadow-2xl px-3 p-2 bg-white"
         initial={{ y: -10, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ duration: 0.5, type: "spring" }}
@@ -208,10 +208,16 @@ export const Navbar = () => {
           </motion.div>
         ) : (
           <motion.div 
-            className="flex items-center gap-2 flex-wrap justify-center"
+            className="flex items-center gap-2 overflow-x-auto whitespace-nowrap pr-2 scrollbar-hide"
+            style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             key="destinations">
+            <style>{`
+              .scrollbar-hide::-webkit-scrollbar {
+                display: none;
+              }
+            `}</style>
             {isLoading ? (
               <div className="flex items-center justify-center p-2">
                 <svg className="animate-spin h-5 w-5 text-gray-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -226,11 +232,11 @@ export const Navbar = () => {
                   key={dest.id}
                   whileTap={{ scale: 0.98 }}
                   transition={{ duration: 0.1 }}
-                  className="flex items-center justify-center transition-colors ease rounded-full py-2.5 px-2.5 gap-1 cursor-pointer hover:bg-black/15"
+                  className="flex items-center justify-center transition-colors ease rounded-full py-2 px-2 gap-1 cursor-pointer hover:bg-black/15 flex-shrink-0"
                   onClick={() => handleNavigationRequest(dest)}
                 >
                   {getIconForDestination(dest.name)}
-                  <span className="font-satoshi text-base font-normal">{dest.name}</span>
+                  <span className="font-satoshi text-base font-normal max-w-[90px] truncate">{dest.name}</span>
                 </motion.div>
               ))
             )}
@@ -242,7 +248,11 @@ export const Navbar = () => {
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
           transition={{ duration: 0.1 }}
-          className="flex justify-center items-center  bg-[#FFC9C9] w-[45px] rounded-full cursor-pointer"
+          className="flex justify-center items-center bg-gradient-to-r from-[#FFC9C980] to-[#FFC9C9] w-[45px] h-[45px] rounded-full cursor-pointer flex-shrink-0"
+          style={{
+            backdropFilter: "blur(8px)",
+            WebkitBackdropFilter: "blur(8px)"
+          }}
         >
           <svg width="30" height="30" viewBox="0 0 30 30" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M12.2759 11.4187L10.0815 12.2173V16.4674H7.68317V10.5314H7.70118L14.019 8.23196C14.3116 8.11933 14.6291 8.06305 14.956 8.07406C16.2888 8.10683 17.4592 8.9805 17.8663 10.2561C18.0897 10.9563 18.2936 11.4289 18.4777 11.6737C19.5717 13.1283 21.3123 14.069 23.2726 14.069V16.4674C20.6648 16.4674 18.3347 15.2782 16.7951 13.4126L16.0979 17.3664L18.4759 19.6692V28.4593H16.0775V21.2812L13.62 18.8983L12.4835 24.0526L4.2168 22.595L4.63326 20.233L10.5381 21.2742L12.2759 11.4187ZM16.6771 7.47351C15.3525 7.47351 14.2787 6.39972 14.2787 5.07513C14.2787 3.75055 15.3525 2.67676 16.6771 2.67676C18.0017 2.67676 19.0755 3.75055 19.0755 5.07513C19.0755 6.39972 18.0017 7.47351 16.6771 7.47351Z" fill="#FF0000"/>

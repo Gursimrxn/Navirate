@@ -66,7 +66,7 @@ export const Dock: React.FC<DockProps> = ({
             <AnimatePresence>
                 {isOpen && (
                     <motion.div
-                        className="mx-auto fixed max-w-md inset-x-0 bottom-0 rounded-t-2xl z-[1000]"
+                        className="mx-auto fixed w-full max-w-md inset-x-0 bottom-0 rounded-t-2xl z-[1000]"
                         initial={{ y: '100%' }}
                         animate={{ y: 0 }}
                         exit={{ y: '100%' }}
@@ -88,7 +88,7 @@ export const Dock: React.FC<DockProps> = ({
                 }}
                 transition={{ duration: 0.3 }}
             >
-                <div className="flex justify-between items-center gap-2 w-xl bg-white rounded-t-3xl shadow-2xl p-4 pb-10 mx-auto">
+                <div className="flex justify-between items-center gap-2 w-full max-w-xl bg-white rounded-t-3xl shadow-2xl p-4 pb-10 mx-auto">
                     <div className="flex flex-col items-center">
                         <motion.button 
                             className="flex justify-center items-center cursor-pointer bg-[#F2F2F2] w-[60px] h-[50px] rounded-[15px]"
