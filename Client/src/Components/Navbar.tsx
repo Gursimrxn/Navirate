@@ -174,6 +174,7 @@ export const Navbar = () => {
     }
   };
 
+  // Keep this function for potential future use, but it's not directly used in UI now
   const handleCancelNavigation = () => {
     navigationService.cancelNavigation();
   };

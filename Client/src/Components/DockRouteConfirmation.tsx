@@ -1,6 +1,8 @@
 import React, { useState, useRef } from 'react';
 import { motion, PanInfo, useMotionValue, AnimatePresence } from 'framer-motion';
 import { ArrowRight, MapPin, Clock, Footprints } from 'lucide-react';
+// Import navigation service to cancel navigation properly
+import { navigationService } from '../services/navigationService';
 
 export interface DockRouteConfirmationProps {
   destination: {
@@ -32,6 +34,13 @@ export const DockRouteConfirmation: React.FC<DockRouteConfirmationProps> = ({
     } else if (info.offset.y > 15 && isExpanded) {
       setIsExpanded(false);
     }
+  };
+
+  const handleCancel = () => {
+    // Clear the navigation state in the service
+    navigationService.cancelNavigation();
+    // Call the provided onCancel callback
+    onCancel();
   };
 
   // Faster snappier transitions
@@ -181,7 +190,7 @@ export const DockRouteConfirmation: React.FC<DockRouteConfirmationProps> = ({
         <div className="bg-white border-t border-gray-100 mt-auto">
           <div className={containerPadding + " flex gap-2 w-full"}>
             <motion.button
-              onClick={onCancel}
+              onClick={handleCancel} // Use our new handleCancel function
               whileTap={{ scale: 0.97 }}
               className={`flex-1 ${buttonPadding} border bg-[#FF000040] border-[#FF000040] rounded-lg text-gray-700 font-medium hover:bg-[#FF000060] active:bg-[#FF000080] transition-all duration-150`}
             >
