@@ -7,7 +7,7 @@ import { PathPoint, BuildingData } from "../types/navigationTypes";
 import { getBearing } from '../utils/navigationUtils';
 import { DockRouteConfirmation } from './DockRouteConfirmation';
 
-const ANIMATION_DURATION = 2000;
+const ANIMATION_DURATION = 3000;
 const CAMERA_MOVE_DURATION = 1500;
 const DRAW_DELAY = 500;
 
@@ -622,13 +622,11 @@ export default function IndoorNavigation({
           latestPath.current = result.path;
           setCurrentFloor(result.path[0].coordinates.floor);
           
-          setTimeout(() => {
-            try {
-              animateRoute(result.path);
-            } catch (error) {
-              renderFullPath(result.path);
-            }
-          }, 300);
+          try {
+            animateRoute(result.path);
+          } catch (error) {
+            renderFullPath(result.path);
+          }
         })
         .catch(err => {
           console.error('Route calculation failed:', err);
