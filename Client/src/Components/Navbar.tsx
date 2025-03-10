@@ -182,7 +182,7 @@ export const Navbar = () => {
   return (
     <div className="fixed z-20 mt-12 w-full">
       <motion.div
-        className="max-w-xl w-[95%] flex justify-between mx-auto rounded-full shadow-2xl px-3 p-2 bg-white"
+        className="max-w-lg w-[95%] flex justify-between mx-auto rounded-full shadow-2xl px-3 p-2 bg-white"
         initial={{ y: -10, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ duration: 0.5, type: "spring" }}
@@ -237,7 +237,7 @@ export const Navbar = () => {
                   onClick={() => handleNavigationRequest(dest)}
                 >
                   {getIconForDestination(dest.name)}
-                  <span className="font-satoshi text-base font-normal max-w-[90px] truncate">{dest.name}</span>
+                  <span className="font-satoshi text-sm font-normal max-w-[90px] truncate">{dest.name}</span>
                 </motion.div>
               ))
             )}

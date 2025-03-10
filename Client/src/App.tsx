@@ -98,7 +98,7 @@ export default function App() {
         <FloorSwitcher 
           currentFloor={currentFloor}
           setCurrentFloor={setCurrentFloor}
-          className="fixed rounded-full left-4 bottom-32"
+          className="fixed rounded-full left-4 bottom-40"
         />
       </div>
       

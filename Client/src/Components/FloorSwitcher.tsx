@@ -20,7 +20,7 @@ export const FloorSwitcher: React.FC<FloorSwitcherProps> = ({
         <motion.button
           key={floor}
           onClick={() => setCurrentFloor(floor)}
-          className={`p-3 w-12 h-12 flex items-center justify-center rounded-full bg-[#30A9531A] 
+          className={`p-3 w-11 h-11 flex items-center justify-center rounded-full bg-[#30A9531A] 
             ${currentFloor === floor ? 'bg-green-500 text-white font-bold' : ' hover:bg-gray-100'}`}
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
