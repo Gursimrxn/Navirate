@@ -135,9 +135,9 @@ class NavigationServiceImpl implements NavigationService {
       return [
         {
           id: "31",
-          name: "Restroom",
-          category: "facilities",
-          description: "Public restroom facilities on ground floor.",
+          name: "Class 104",
+          category: "common",
+          description: "Classroom with seating for 30 students.",
           floor: "G"
         },
         {
