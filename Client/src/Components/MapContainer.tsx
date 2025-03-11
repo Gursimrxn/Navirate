@@ -252,9 +252,6 @@ export default function IndoorNavigation({
           console.log("Animation complete");
           setIsAnimating(false);
           updateRouteColors();
-          if (!isEmergency) {
-            navigationService.completeNavigation();
-          }
         }
       };
 
@@ -336,6 +333,8 @@ export default function IndoorNavigation({
       zoom: 15.5,
       bearing: 182,
       antialias: true,
+      collectResourceTiming: false,
+      trackResize: true,
     });
 
     map.current = mapInstance;
@@ -348,7 +347,7 @@ export default function IndoorNavigation({
           data = preloadedData;
         } else {
           console.log("Fetching building data");
-          const response = await fetch('/test3.geojson');
+          const response = await fetch('/Turing2.geojson');
           if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
           data = await response.json();
         }
@@ -613,6 +612,9 @@ export default function IndoorNavigation({
         return;
       }
       
+      // Signal that route animation is starting
+      navigationEvents.startAnimating();
+      
       navigationService.calculateRoute(currentStartId, currentEndId)
         .then(result => {
           if (!result?.path?.length) {
@@ -621,6 +623,9 @@ export default function IndoorNavigation({
           
           latestPath.current = result.path;
           setCurrentFloor(result.path[0].coordinates.floor);
+          
+          // Pass route info for navbar display
+          navigationService.startNavigation(routeInfo);
           
           try {
             animateRoute(result.path);
@@ -639,7 +644,8 @@ export default function IndoorNavigation({
     setDockContent, 
     setCurrentFloor, 
     animateRoute, 
-    renderFullPath
+    renderFullPath,
+    routeInfo
   ]);
   
   const handleCancelNavigation = useCallback(() => {
