@@ -101,6 +101,19 @@ class NavigationServiceImpl implements NavigationService {
         }
       }
       
+      // Get route info to display in the navbar
+      try {
+        const routeInfo = await this.estimateRouteInfo(actualStartId, endId);
+        const distance = Math.round(routeInfo.steps * 0.75).toString(); // Rough conversion of steps to meters
+        navigationEvents.activateNavigation({
+          distance: distance,
+          time: routeInfo.time,
+          steps: routeInfo.steps
+        });
+      } catch (error) {
+        console.error("Could not estimate route info:", error);
+      }
+      
       return result;
     } catch (error) {
       navigationEvents.fail(error instanceof Error ? error.message : "Route calculation failed");
@@ -248,6 +261,18 @@ class NavigationServiceImpl implements NavigationService {
   cancelNavigation() {
     this.isNavigating = false;
     navigationEvents.cancel();
+  }
+
+  // Call this when navigation is in progress with route info
+  startNavigation(routeInfo: {steps: number, time: string}) {
+    // Convert steps to approximate distance (using average step length)
+    const distance = Math.round(routeInfo.steps * 0.75).toString(); // meters
+    
+    navigationEvents.activateNavigation({
+      distance: distance,
+      time: routeInfo.time,
+      steps: routeInfo.steps
+    });
   }
 }
 

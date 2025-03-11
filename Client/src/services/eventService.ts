@@ -6,7 +6,7 @@ export type EmergencyPath = {
   path?: PathPoint[];
 };
 
-type NavigationStatus = "started" | "completed" | "cancelled" | "failed";
+type NavigationStatus = "started" | "animating" | "active" | "update" | "completed" | "cancelled" | "failed";
 
 type NavigationCallback = (startId: string, endId: string | EmergencyPath) => void;
 
@@ -32,6 +32,22 @@ class NavigationEventService {
         debugService.info(`Navigation event emitted: ${startId} → ${typeof endIdOrPath === 'string' ? endIdOrPath : 'emergency'}`);
         this.listeners.forEach(callback => callback(startId, endIdOrPath));
         this.statusListeners.forEach(callback => callback("started"));
+    }
+
+    startAnimating() {
+        debugService.info('Navigation animation started');
+        this.statusListeners.forEach(callback => callback("animating"));
+    }
+
+    activateNavigation(routeInfo: {distance?: string, time?: string, steps?: number}) {
+        debugService.info('Navigation active with route info');
+        const message = JSON.stringify(routeInfo);
+        this.statusListeners.forEach(callback => callback("active", message));
+    }
+
+    updateNavigation(details: {instruction?: string, distance?: string, time?: string}) {
+        const message = JSON.stringify(details);
+        this.statusListeners.forEach(callback => callback("update", message));
     }
 
     complete() {
