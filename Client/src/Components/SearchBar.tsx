@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { Search, ArrowLeft } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { useState, useEffect } from "react";
 import { navigationService, Destination } from "../services/navigationService";
 import { navigationEvents } from "../services/eventService";
@@ -123,23 +123,23 @@ const SearchBar = ({
       animate={{ y: 0, opacity: 1 }}
       exit={{ y: -100, opacity: 0 }}
       transition={{ type: "spring", stiffness: 300, damping: 30 }}
-      className="fixed top-0 left-0 right-0 bg-transparent backdrop-blur-sm min-h-screen z-50"
+      className="fixed top-0 left-0 right-0 bg-transparent backdrop-blur-lg min-h-screen z-50"
       onKeyDown={(e) => {
         if (e.key === 'Escape') onClose();
       }}
     >
-      <div className="max-w-xl mx-auto p-4">
+      <div className="max-w-lg mx-auto p-4">
         {/* Back button */}
 
-        <button 
-          onClick={onClose} 
-          className="absolute top-4 left-4 p-2 rounded-full bg-gray-100 hover:bg-gray-200"
-          aria-label="Close search"
-        >
-          <ArrowLeft size={20} />
-        </button>
-        <div className="flex items-center bg-gray-100 p-3 rounded-full shadow-md mb-4 mt-12">
-          <Search className="text-gray-400" />
+        
+        <div className="flex items-center bg-gray-100 p-3.5 rounded-full shadow-lg mb-4 mt-8">
+          <button 
+            onClick={onClose} 
+            className="rounded-full text-gray-400 hover:bg-gray-200"
+            aria-label="Close search"
+          >
+            <ArrowLeft size={21} />
+          </button>
           <input
             autoFocus
             type="text"
@@ -161,7 +161,7 @@ const SearchBar = ({
           </button>
         </div>
 
-        <div className="bg-gray-100 rounded-lg shadow-md p-4">
+        <div className="bg-gray-100 rounded-3xl shadow-md p-4">
           {isLoading ? (
             <div className="py-3 text-center text-gray-500">Loading destinations...</div>
           ) : filteredDestinations.length > 0 ? (
