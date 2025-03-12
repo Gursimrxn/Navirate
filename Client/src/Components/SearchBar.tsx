@@ -124,13 +124,13 @@ const SearchBar = ({
       exit={{ y: -100, opacity: 0 }}
       transition={{ type: "spring", stiffness: 300, damping: 30 }}
       className="fixed top-0 left-0 right-0 bg-transparent backdrop-blur-lg min-h-screen z-50"
+      onClick={onClose} // Close when clicking on backdrop
       onKeyDown={(e) => {
         if (e.key === 'Escape') onClose();
       }}
     >
-      <div className="max-w-lg mx-auto p-4">
+      <div className="max-w-lg mx-auto p-4" onClick={(e) => e.stopPropagation()}>
         {/* Back button */}
-
         
         <div className="flex items-center bg-gray-100 p-3.5 rounded-full shadow-lg mb-4 mt-8">
           <button 
