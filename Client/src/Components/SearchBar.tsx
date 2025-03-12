@@ -123,7 +123,7 @@ const SearchBar = ({
       animate={{ y: 0, opacity: 1 }}
       exit={{ y: -100, opacity: 0 }}
       transition={{ type: "spring", stiffness: 300, damping: 30 }}
-      className="fixed top-0 left-0 right-0 bg-transparent min-h-screen z-50"
+      className="fixed top-0 left-0 right-0 bg-transparent backdrop-blur-sm min-h-screen z-50"
       onKeyDown={(e) => {
         if (e.key === 'Escape') onClose();
       }}
