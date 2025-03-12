@@ -3,6 +3,7 @@ import { Search, ArrowLeft } from "lucide-react";
 import { useState, useEffect } from "react";
 import { navigationService, Destination } from "../services/navigationService";
 import { navigationEvents } from "../services/eventService";
+import { Navbar } from "./Navbar";
 
 interface SearchBarProps {
   onClose: () => void;
@@ -105,7 +106,8 @@ const SearchBar = ({
       handleNavigation(destination.id);
     } catch (error) {
       console.error("Failed to estimate route:", error);
-      handleNavigation(destination.id);
+      // Ensure we close the searchbar even if navigation fails
+      onClose();
     }
   };
 
@@ -121,7 +123,10 @@ const SearchBar = ({
       animate={{ y: 0, opacity: 1 }}
       exit={{ y: -100, opacity: 0 }}
       transition={{ type: "spring", stiffness: 300, damping: 30 }}
-      className="fixed top-0 left-0 right-0 bg-white min-h-screen z-50"
+      className="fixed top-0 left-0 right-0 bg-transparent min-h-screen z-50"
+      onKeyDown={(e) => {
+        if (e.key === 'Escape') onClose();
+      }}
     >
       <div className="max-w-xl mx-auto p-4">
         {/* Back button */}
@@ -182,24 +187,9 @@ const SearchBar = ({
             </div>
           )}
         </div>
-
-        <div className="fixed bottom-4 left-4 right-4 flex justify-center">
-          <div className="flex flex-wrap justify-center gap-2 bg-white p-2 rounded-lg shadow-lg">
-            {destinations.slice(0, 4).map((dest) => (
-              <motion.button
-                key={dest.id}
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                className="flex items-center gap-2 px-4 py-2 bg-gray-100 rounded-full hover:bg-gray-200"
-                onClick={() => handleSelectDestination(dest)}
-              >
-                <span>{dest.icon}</span>
-                <span>{dest.name}</span>
-              </motion.button>
-            ))}
-          </div>
+        {/* Replace custom navigation with Navbar component */}
         </div>
-      </div>
+          <Navbar onClose={onClose} className="bottom-12" />
     </motion.div>
   );
 };
