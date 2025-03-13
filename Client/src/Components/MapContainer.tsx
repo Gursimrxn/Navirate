@@ -5,7 +5,7 @@ import { EmergencyPath, navigationEvents } from '../services/eventService';
 import { navigationService } from '../services/navigationService';
 import { PathPoint, BuildingData } from "../types/navigationTypes";
 import { getBearing } from '../utils/navigationUtils';
-import { DockRouteConfirmation } from './DockRouteConfirmation';
+import { DockRouteConfirmation } from './Dock';
 
 const ANIMATION_DURATION = 3000;
 const CAMERA_MOVE_DURATION = 1500;
@@ -591,68 +591,87 @@ export default function IndoorNavigation({
   }, [isEmergency]);
   
   const handleStartRoute = useCallback(() => {
-    if (!confirmationDestination) return;
+    // DO NOT close the dock when starting navigation
+    // Instead, keep the dock open with the route information showing the cancel button
 
-    setDockOpen(false);
-    setDockContent(null);
-
-    let calculationStarted = false;
+    console.log("Starting route animation");
     
-    setTimeout(() => {
-      if (calculationStarted) return;
-      calculationStarted = true;
-      
-      const currentStartId = startId || "5"; 
-      const currentEndId = confirmationDestination.id;
-      
-      console.log("Starting route calculation:", currentStartId, currentEndId);
-      
-      if (!currentStartId || !currentEndId) {
-        console.error('Missing IDs for route calculation');
-        return;
-      }
-      
-      // Signal that route animation is starting
-      navigationEvents.startAnimating();
-      
-      navigationService.calculateRoute(currentStartId, currentEndId)
-        .then(result => {
-          if (!result?.path?.length) {
-            throw new Error('No valid path found');
-          }
-          
-          latestPath.current = result.path;
-          setCurrentFloor(result.path[0].coordinates.floor);
-          
-          // Pass route info for navbar display
-          navigationService.startNavigation(routeInfo);
-          
-          try {
-            animateRoute(result.path);
-          } catch (error) {
-            renderFullPath(result.path);
-          }
-        })
-        .catch(err => {
-          console.error('Route calculation failed:', err);
-        });
-    }, 100);
+    if (!confirmationDestination) return;
+    
+    const currentStartId = startId || "5"; 
+    const currentEndId = confirmationDestination.id;
+    
+    console.log("Starting route animation:", currentStartId, currentEndId);
+    
+    if (!currentStartId || !currentEndId) {
+      console.error('Missing IDs for route animation');
+      return;
+    }
+    
+    // Signal that route animation is starting
+    navigationEvents.startAnimating();
+    
+    // Keep the dock content showing - it will display the Cancel button because
+    // DockRouteConfirmation will be in isNavigating=true state
+    
+    navigationService.calculateRoute(currentStartId, currentEndId)
+      .then(result => {
+        if (!result?.path?.length) {
+          throw new Error('No valid path found');
+        }
+        
+        console.log('Route calculated successfully');
+        // Ensure the current route information stays in the dock
+        // DO NOT update setDockOpen(false) here
+        
+        // Continue with the navigation logic...
+        animateRoute(result.path);
+        renderFullPath(result.path);
+      })
+      .catch(err => {
+        console.error('Route calculation failed:', err);
+        navigationEvents.fail('Route calculation failed');
+        // In case of error, we can close the dock
+        handleCancelNavigation();
+      });
+
   }, [
     confirmationDestination, 
     startId, 
-    setDockOpen, 
-    setDockContent, 
-    setCurrentFloor, 
+    navigationEvents.startAnimating, 
+    navigationService.calculateRoute,
     animateRoute, 
-    renderFullPath,
-    routeInfo
+    renderFullPath
   ]);
   
   const handleCancelNavigation = useCallback(() => {
     setDockOpen(false);
     setDockContent(null);
     removeDestinationMarker();
-  }, [removeDestinationMarker, setDockContent, setDockOpen]);
+    
+    // Clear the route from the map - ensure this is working properly
+    if (map.current) {
+      // Hide the route layer first
+      if (map.current.getLayer('route')) {
+        map.current.setLayoutProperty('route', 'visibility', 'none');
+      }
+      
+      // Clear the route data
+      if (map.current.getSource('route')) {
+        (map.current.getSource('route') as mapboxgl.GeoJSONSource).setData({
+          type: 'FeatureCollection',
+          features: []
+        });
+      }
+    }
+    
+    // Reset the path reference
+    latestPath.current = [];
+    
+    // Make sure navigation state is properly reset and any ongoing route calculation is canceled
+    cleanupAnimation();
+    navigationService.cancelNavigation();
+  }, [removeDestinationMarker, setDockContent, setDockOpen, cleanupAnimation]);
 
   useEffect(() => {
     if (shouldShowConfirmation && confirmationDestination) {
@@ -676,7 +695,7 @@ export default function IndoorNavigation({
         setShouldShowConfirmation(false);
       };
       
-      setTimeout(showConfirmation, 1000);
+      setTimeout(showConfirmation, 300);
     }
   }, [
     shouldShowConfirmation,
