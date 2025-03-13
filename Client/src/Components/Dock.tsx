@@ -2,7 +2,7 @@ import React, { useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import SearchBar from "./SearchBar";
 import { navigationEvents } from "../services/eventService";
-import { ArrowRight, Clock } from "lucide-react";
+import { Clock } from "lucide-react";
 import { navigationService } from "../services/navigationService";
 
 // DockRouteConfirmation Props Interface
@@ -70,21 +70,12 @@ export const DockRouteConfirmation: React.FC<DockRouteConfirmationProps> = ({
             >
                 <div className="border-b border-gray-100">
                     {/* Header row with title */}
-                    <div className="flex items-start justify-between p-3">
-                        <div className="flex items-center gap-2">
-                            <div className="flex flex-col">
-                                <h2 className="font-bold text-xl truncate">
-                                    To {destination.name}
-                                </h2>
-                                <p className="text-gray-500 text-sm truncate">
-                                    {destination.description}
-                                </p>
-                            </div>
-                        </div>
-
-                        {/* Chips for steps and time */}
-                        <div className="flex items-center gap-2">
-                            <div className="flex items-center gap-1 bg-green-50 px-3 py-2 rounded-full">
+                        <div className="flex flex-col items-start justify-center gap-2 p-3">
+                            <div className="flex justify-between w-full font-bold text-xl">
+                                To {destination.name}
+                                {/* Chips for steps and time */}
+                                <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-1 bg-[#0000001A] px-3 py-2 rounded-full">
                                 <svg
                                     width="10"
                                     height="11"
@@ -103,14 +94,18 @@ export const DockRouteConfirmation: React.FC<DockRouteConfirmationProps> = ({
                                 </span>
                             </div>
 
-                            <div className="flex items-center gap-1 bg-green-50 px-3 py-2 rounded-full">
+                            <div className="flex items-center gap-1 bg-[#0000001A] px-3 py-2 rounded-full">
                                 <Clock size={14} />
                                 <span className="text-xs font-medium">
                                     {time} {time == "1" ? "minute" : "minutes"}
                                 </span>
                             </div>
+                                </div>
+                            </div>
+                            <p className="text-gray-500 text-left text-sm truncate">
+                                {destination.description}
+                            </p>
                         </div>
-                    </div>
                 </div>
 
                 {/* Action buttons - fixed at bottom */}
@@ -121,9 +116,9 @@ export const DockRouteConfirmation: React.FC<DockRouteConfirmationProps> = ({
                             <motion.button
                                 onClick={handleStartRoute}
                                 whileTap={{ scale: 0.97 }}
-                                className={`w-full ${buttonPadding} bg-green-500 text-white rounded-lg font-medium flex items-center justify-center gap-1 hover:bg-green-600 active:bg-green-700 transition-all duration-150`}
+                                className={`w-full h-14 rounded-2xl ${buttonPadding} bg-[#30A953] text-white font-medium flex items-center justify-center gap-1 hover:bg-green-600 active:bg-green-700 transition-all duration-150`}
                             >
-                                Start <ArrowRight size={16} />
+                                Start
                             </motion.button>
                         ) : (
                             // Show "Cancel" button when navigating
