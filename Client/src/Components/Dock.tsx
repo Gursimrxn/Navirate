@@ -1,4 +1,4 @@
-import React, { useRef, useState } from "react";
+import React, { useRef, useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import SearchBar from "./SearchBar";
 import { navigationEvents } from "../services/eventService";
@@ -16,6 +16,8 @@ export interface DockRouteConfirmationProps {
     time: string;
     onStartRoute: () => void;
     onCancel: () => void;
+    // Add new isNavigating prop
+    isNavigating?: boolean;
 }
 
 // DockRouteConfirmation Component
@@ -25,10 +27,17 @@ export const DockRouteConfirmation: React.FC<DockRouteConfirmationProps> = ({
     time,
     onStartRoute,
     onCancel,
+    // Accept the prop with default value
+    isNavigating: initialIsNavigating = false
 }) => {
-    // Track navigation state locally
-    const [isNavigating, setIsNavigating] = useState(false);
+    // Track navigation state locally but allow it to be controlled from parent
+    const [isNavigating, setIsNavigating] = useState(initialIsNavigating);
     const containerRef = useRef<HTMLDivElement>(null);
+    
+    // Update local state when prop changes
+    useEffect(() => {
+        setIsNavigating(initialIsNavigating);
+    }, [initialIsNavigating]);
 
     const handleCancel = () => {
         // Clear the navigation state in the service
@@ -51,7 +60,7 @@ export const DockRouteConfirmation: React.FC<DockRouteConfirmationProps> = ({
 
     return (
         <div
-            className="fixed bottom-0 left-0 right-0 flex justify-center z-[1000]"
+            className="fixed bottom-0 left-0 right-0 flex justify-center z-10"
             ref={containerRef}
         >
             <motion.div

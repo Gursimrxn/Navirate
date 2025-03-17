@@ -59,6 +59,7 @@ export default function IndoorNavigation({
   });
 
   const [shouldShowConfirmation, setShouldShowConfirmation] = useState(false);
+  const [isNavigationActive, setIsNavigationActive] = useState(false);
 
   const getDestinationDescription = (destination: any) => {
     const descriptions: Record<string, string> = {
@@ -118,9 +119,15 @@ export default function IndoorNavigation({
   const generateRouteFeatures = useCallback((path: PathPoint[], floor: string, emergency: boolean) => {
     return path.slice(0, -1).map((p1, i) => {
       const p2 = path[i + 1];
+      // Ensure case-insensitive floor comparison
       const pathFloor = (p1.coordinates.floor || "").toLowerCase();
       const currentMapFloor = (floor || "").toLowerCase();
-      const isCurrent = pathFloor === currentMapFloor;
+      const isSameFloor = pathFloor === currentMapFloor;
+      
+      // Emergency paths are always red, current floor paths are green, other floors are gray
+      const color = emergency ? '#FF0000' : (isSameFloor ? '#30A953' : 'gray');
+      // Current floor paths have full opacity, other floors are semi-transparent
+      const opacity = isSameFloor ? 1 : 0.3;
       
       return {
         type: "Feature" as const,
@@ -129,8 +136,8 @@ export default function IndoorNavigation({
           coordinates: [[p1.coordinates.x, p1.coordinates.y], [p2.coordinates.x, p2.coordinates.y]]
         },
         properties: {
-          color: emergency ? '#FF0000' : (isCurrent ? '#30A953' : 'gray'),
-          opacity: isCurrent ? 1 : 0.3,
+          color: color,
+          opacity: opacity,
           floor: p1.coordinates.floor
         }
       };
@@ -147,9 +154,17 @@ export default function IndoorNavigation({
         return;
       }
       
+      console.log(`Updating route colors with floor=${currentFloor}, emergency=${isEmergency}`);
+      
+      // Force full regeneration of route features with current floor
       const features = generateRouteFeatures(latestPath.current, currentFloor, isEmergency);
       
       if (map.current.getSource('route')) {
+        // Ensure route layer is visible
+        if (map.current.getLayer('route')) {
+          map.current.setLayoutProperty('route', 'visibility', 'visible');
+        }
+        
         (map.current.getSource('route') as mapboxgl.GeoJSONSource).setData({
           type: 'FeatureCollection',
           features
@@ -275,9 +290,15 @@ export default function IndoorNavigation({
       const p = path[i];
       const next = path[i + 1];
       
+      // Ensure case-insensitive floor comparison
       const pathFloor = (p.coordinates.floor || "").toLowerCase();
-      const mapFloor = (currentFloor || "").toLowerCase();
-      const isCurrentFloor = pathFloor === mapFloor;
+      const currentMapFloor = (currentFloor || "").toLowerCase();
+      const isSameFloor = pathFloor === currentMapFloor;
+      
+      // Emergency paths are always red, current floor paths are green, other floors are gray
+      const color = isEmergency ? '#FF0000' : (isSameFloor ? '#30A953' : 'gray');
+      // Current floor paths have full opacity, other floors are semi-transparent
+      const opacity = isSameFloor ? 1 : 0.3;
       
       animatedFeatures.push({
         type: 'Feature',
@@ -286,8 +307,8 @@ export default function IndoorNavigation({
           coordinates: [[p.coordinates.x, p.coordinates.y], [next.coordinates.x, next.coordinates.y]]
         },
         properties: {
-          color: isEmergency ? '#FF0000' : (isCurrentFloor ? '#30A953' : 'gray'),
-          opacity: isCurrentFloor ? 1 : 0.3,
+          color: color,
+          opacity: opacity,
           floor: p.coordinates.floor
         }
       });
@@ -297,9 +318,13 @@ export default function IndoorNavigation({
       const p = path[currentSegment];
       const next = path[currentSegment + 1];
       
+      // Same consistent logic for the current segment being animated
       const pathFloor = (p.coordinates.floor || "").toLowerCase();
-      const mapFloor = (currentFloor || "").toLowerCase();
-      const isCurrentFloor = pathFloor === mapFloor;
+      const currentMapFloor = (currentFloor || "").toLowerCase();
+      const isSameFloor = pathFloor === currentMapFloor;
+      
+      const color = isEmergency ? '#FF0000' : (isSameFloor ? '#30A953' : 'gray');
+      const opacity = isSameFloor ? 1 : 0.3;
       
       const interpolatedPoint = {
         x: p.coordinates.x + (next.coordinates.x - p.coordinates.x) * segmentProgress,
@@ -313,8 +338,8 @@ export default function IndoorNavigation({
           coordinates: [[p.coordinates.x, p.coordinates.y], [interpolatedPoint.x, interpolatedPoint.y]]
         },
         properties: {
-          color: isEmergency ? '#FF0000' : (isCurrentFloor ? '#30A953' : 'gray'),
-          opacity: isCurrentFloor ? 1 : 0.3,
+          color: color,
+          opacity: opacity,
           floor: p.coordinates.floor
         }
       });
@@ -378,21 +403,6 @@ export default function IndoorNavigation({
     };
   }, [cleanupAnimation, initRouteLayer, preloadedData]);
 
-  const handleEmergencyNavigation = useCallback(async () => {
-    cleanupAnimation();
-    setIsEmergency(true);
-    try {
-      const result = await navigationService.calculateEmergencyRoute(startId);
-      if (!result?.path?.length) throw new Error('No valid emergency path found');
-
-      latestPath.current = result.path;
-      setCurrentFloor(result.path[0].coordinates.floor);
-      animateRoute(result.path);
-    } catch (err) {
-      console.error('Emergency route calculation failed:', err);
-      setIsEmergency(false);
-    }
-  }, [startId, cleanupAnimation, setCurrentFloor, animateRoute]);
 
   
 
@@ -449,14 +459,22 @@ export default function IndoorNavigation({
     const markerElement = document.createElement('div');
     markerElement.className = 'destination-marker';
     markerElement.innerHTML = `
-      <div class="w-8 h-8 bg-primary rounded-full flex items-center justify-center animate-pulse">
-        <div class="w-5 h-5 bg-green-300 rounded-full"></div>
+      <div class="w-10 h-10 bg-primary rounded-full flex items-center justify-center animate-pulse shadow-lg">
+        <div class="w-6 h-6 bg-white rounded-full flex items-center justify-center">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" 
+                  fill="#30A953"/>
+          </svg>
+        </div>
       </div>
     `;
     
     console.log("Adding marker at coordinates:", coordinates);
     
-    destinationMarker.current = new mapboxgl.Marker(markerElement)
+    destinationMarker.current = new mapboxgl.Marker({
+      element: markerElement,
+      anchor: 'bottom',
+    })
       .setLngLat([coordinates.x, coordinates.y])
       .addTo(map.current);
       
@@ -473,6 +491,12 @@ export default function IndoorNavigation({
   const selectDestination = useCallback(async (startId: string, endId: string) => {
     try {
       console.log("Selecting destination:", startId, endId);
+      
+      // Don't reselect if we're already navigating to this destination
+      if (isNavigationActive && confirmationDestination?.id === endId) {
+        console.log("Already navigating to this destination");
+        return;
+      }
       
       setStartId(startId);
       // No longer need to set endId separately as it's part of confirmationDestination
@@ -551,49 +575,78 @@ export default function IndoorNavigation({
     addDestinationMarker,
     setRouteInfo,
     setConfirmationDestination,
-    isOnline
+    isOnline,
+    isNavigationActive,
+    confirmationDestination // Add this dependency
   ]);
 
 
   const renderFullPath = useCallback((path: PathPoint[]) => {
     console.log("Rendering full path directly");
-    if (!map.current || !path.length || !map.current.getSource('route')) return;
+    if (!map.current || !path.length) return;
     
     try {
-      const features = path.slice(0, -1).map((p1, i) => {
-        const p2 = path[i + 1];
-        return {
-          type: 'Feature' as const,
-          geometry: {
-            type: 'LineString' as const,
-            coordinates: [[p1.coordinates.x, p1.coordinates.y], [p2.coordinates.x, p2.coordinates.y]]
-          },
-          properties: {
-            color: isEmergency ? '#FF0000' : '#30A953',
-            opacity: 1
-          }
-        };
-      });
-      
-      console.log(`Rendering ${features.length} path segments`);
-      
-      (map.current.getSource('route') as mapboxgl.GeoJSONSource)?.setData({
-        type: 'FeatureCollection',
-        features
-      });
-      
-      if (map.current.getLayer('route')) {
-        map.current.setLayoutProperty('route', 'visibility', 'visible');
+      // Ensure the route source exists
+      if (!map.current.getSource('route')) {
+        console.log("Route source missing, initializing");
+        initRouteLayer(map.current);
+        
+        // After initializing, we need a small delay before setting data
+        setTimeout(() => {
+          renderFullPathFeatures(path);
+        }, 50);
+        return;
       }
+      
+      renderFullPathFeatures(path);
     } catch (err) {
       console.error("Failed to render full path:", err);
     }
-  }, [isEmergency]);
+  }, [isEmergency, currentFloor]);
+
+  // Separate function to avoid duplicating code
+  const renderFullPathFeatures = useCallback((path: PathPoint[]) => {
+    if (!map.current || !map.current.getSource('route')) return;
+    
+    const features = path.slice(0, -1).map((p1, i) => {
+      const p2 = path[i + 1];
+      // Check if path segment is on current floor
+      const pathFloor = (p1.coordinates.floor || "").toLowerCase();
+      const currentMapFloor = (currentFloor || "").toLowerCase();
+      const isCurrentFloor = pathFloor === currentMapFloor;
+      
+      return {
+        type: 'Feature' as const,
+        geometry: {
+          type: 'LineString' as const,
+          coordinates: [[p1.coordinates.x, p1.coordinates.y], [p2.coordinates.x, p2.coordinates.y]]
+        },
+        properties: {
+          color: isEmergency ? '#FF0000' : (isCurrentFloor ? '#30A953' : 'gray'),
+          opacity: isCurrentFloor ? 1 : 0.3,
+          floor: p1.coordinates.floor
+        }
+      };
+    });
+    
+    console.log(`Rendering ${features.length} path segments`);
+    
+    // Make sure the layer is visible before updating
+    if (map.current.getLayer('route')) {
+      map.current.setLayoutProperty('route', 'visibility', 'visible');
+    }
+    
+    // Then update the data
+    (map.current.getSource('route') as mapboxgl.GeoJSONSource).setData({
+      type: 'FeatureCollection',
+      features
+    });
+    
+  }, [currentFloor, isEmergency]);
+  
+
   
   const handleStartRoute = useCallback(() => {
-    // DO NOT close the dock when starting navigation
-    // Instead, keep the dock open with the route information showing the cancel button
-
     console.log("Starting route animation");
     
     if (!confirmationDestination) return;
@@ -608,12 +661,34 @@ export default function IndoorNavigation({
       return;
     }
     
+    // Set navigation active state
+    setIsNavigationActive(true);
+    
+    // Ensure destination marker is visible
+    if (confirmationDestination.coordinates) {
+      addDestinationMarker(confirmationDestination.coordinates);
+    }
+    
     // Signal that route animation is starting
     navigationEvents.startAnimating();
     
-    // Keep the dock content showing - it will display the Cancel button because
-    // DockRouteConfirmation will be in isNavigating=true state
+    // If we already have a path for this route, use it instead of recalculating
+    if (latestPath.current.length > 0 && 
+        !isEmergency &&  // Don't reuse path for emergency routes
+        confirmationDestination.coordinates.floor === latestPath.current[0].coordinates.floor) {
+      
+      console.log('Reusing existing path');
+      
+      // Show the cancel button in the dock
+      updateDockWithCancelButton();
+      
+      // Use existing path
+      animateRoute(latestPath.current);
+      renderFullPath(latestPath.current);
+      return;
+    }
     
+    // Otherwise calculate new route
     navigationService.calculateRoute(currentStartId, currentEndId)
       .then(result => {
         if (!result?.path?.length) {
@@ -621,8 +696,32 @@ export default function IndoorNavigation({
         }
         
         console.log('Route calculated successfully');
-        // Ensure the current route information stays in the dock
-        // DO NOT update setDockOpen(false) here
+        
+        // Store path for later reference and floor changes
+        latestPath.current = result.path;
+        
+        // Show the cancel button in the dock by updating dock content DIRECTLY
+        // instead of calling updateDockWithCancelButton to avoid dependency cycle
+        if (confirmationDestination) {
+          const content = (
+            <DockRouteConfirmation
+              destination={{
+                name: confirmationDestination.name,
+                description: confirmationDestination.description,
+                category: confirmationDestination.category
+              }}
+              steps={routeInfo.steps}
+              time={routeInfo.time}
+              // This forces the DockRouteConfirmation to show cancel button
+              isNavigating={true}
+              onStartRoute={handleStartRoute}
+              onCancel={handleCancelNavigation}
+            />
+          );
+          
+          setDockContent(content);
+          setDockOpen(true);
+        }
         
         // Continue with the navigation logic...
         animateRoute(result.path);
@@ -631,47 +730,161 @@ export default function IndoorNavigation({
       .catch(err => {
         console.error('Route calculation failed:', err);
         navigationEvents.fail('Route calculation failed');
-        // In case of error, we can close the dock
+        setIsNavigationActive(false);
         handleCancelNavigation();
       });
 
   }, [
     confirmationDestination, 
     startId, 
+    routeInfo,
+    setDockContent,
+    setDockOpen, 
     navigationEvents.startAnimating, 
     navigationService.calculateRoute,
     animateRoute, 
-    renderFullPath
+    renderFullPath,
+    // Add missing dependencies
+    setIsNavigationActive,
+    // You can't reference handleCancelNavigation here because of circular dependency
+    // We'll use a ref for this
+    addDestinationMarker,
   ]);
-  
+
+  const handleEmergencyNavigation = useCallback(async () => {
+    console.log("Starting EMERGENCY navigation");
+    cleanupAnimation();
+    setIsEmergency(true);
+    setIsNavigationActive(true);
+    
+    try {
+      const result = await navigationService.calculateEmergencyRoute(startId);
+      if (!result?.path?.length) throw new Error('No valid emergency path found');
+
+      console.log("Emergency route calculated with", result.path.length, "points");
+      latestPath.current = result.path;
+      
+      // Set floor to the emergency exit route's starting floor
+      setCurrentFloor(result.path[0].coordinates.floor);
+      
+      // Need to update the dock with emergency info
+      setDockContent(
+        <div className="bg-red-100 p-4 rounded-lg text-red-800 flex flex-col items-center">
+          <h3 className="text-xl font-bold mb-2">EMERGENCY EVACUATION</h3>
+          <p className="mb-4">Follow the red route to the nearest exit</p>
+          <button 
+            onClick={() => {
+              if (cancelNavigationRef.current) cancelNavigationRef.current();
+            }}
+            className="bg-red-600 text-white py-2 px-4 rounded-lg"
+          >
+            Cancel Emergency
+          </button>
+        </div>
+      );
+      setDockOpen(true);
+      
+      // Render the emergency route
+      renderFullPath(result.path);
+      animateRoute(result.path);
+      
+    } catch (err) {
+      console.error('Emergency route calculation failed:', err);
+      setIsEmergency(false);
+      setIsNavigationActive(false);
+      alert('Failed to calculate emergency route!');
+    }
+  }, [
+    startId, 
+    cleanupAnimation, 
+    setCurrentFloor, 
+    animateRoute, 
+    renderFullPath,
+    setDockContent,
+    setDockOpen,
+    setIsEmergency,
+    setIsNavigationActive,
+  ]);
+
+ 
   const handleCancelNavigation = useCallback(() => {
+    console.log("Canceling navigation");
+    
+    setIsNavigationActive(false);
+    setIsEmergency(false); // Reset emergency state too
     setDockOpen(false);
     setDockContent(null);
     removeDestinationMarker();
     
-    // Clear the route from the map - ensure this is working properly
+    // More aggressive path clearing - completely remove the path
     if (map.current) {
-      // Hide the route layer first
-      if (map.current.getLayer('route')) {
-        map.current.setLayoutProperty('route', 'visibility', 'none');
-      }
-      
-      // Clear the route data
-      if (map.current.getSource('route')) {
-        (map.current.getSource('route') as mapboxgl.GeoJSONSource).setData({
-          type: 'FeatureCollection',
-          features: []
-        });
+      try {
+        // First hide the route layer
+        if (map.current.getLayer('route')) {
+          map.current.setLayoutProperty('route', 'visibility', 'none');
+        }
+        
+        // Clear the route data with an empty feature collection
+        if (map.current.getSource('route')) {
+          (map.current.getSource('route') as mapboxgl.GeoJSONSource).setData({
+            type: 'FeatureCollection',
+            features: []
+          });
+        }
+        
+        // Make sure it's really gone by forcing a redraw
+        map.current.triggerRepaint();
+      } catch (err) {
+        console.error("Error clearing route:", err);
       }
     }
     
     // Reset the path reference
     latestPath.current = [];
     
-    // Make sure navigation state is properly reset and any ongoing route calculation is canceled
+    // Make sure navigation state is properly reset
     cleanupAnimation();
     navigationService.cancelNavigation();
-  }, [removeDestinationMarker, setDockContent, setDockOpen, cleanupAnimation]);
+  }, [cleanupAnimation, removeDestinationMarker, setDockContent, setDockOpen, setIsNavigationActive, setIsEmergency]);
+
+ 
+  const cancelNavigationRef = useRef<(() => void) | undefined>(undefined);
+  useEffect(() => {
+    cancelNavigationRef.current = handleCancelNavigation;
+  }, [handleCancelNavigation]);
+  
+  const updateDockWithCancelButton = useCallback(() => {
+    if (!confirmationDestination) return;
+    
+    const content = (
+      <DockRouteConfirmation
+        destination={{
+          name: confirmationDestination.name,
+          description: confirmationDestination.description,
+          category: confirmationDestination.category
+        }}
+        steps={routeInfo.steps}
+        time={routeInfo.time}
+        // This forces the DockRouteConfirmation to show cancel button
+        isNavigating={true}
+        // Use the original functions from props
+        onStartRoute={() => {}} // No-op since we're already navigating
+        onCancel={() => {
+          if (cancelNavigationRef.current) cancelNavigationRef.current();
+        }}
+      />
+    );
+    
+    setDockContent(content);
+    setDockOpen(true);
+  }, [
+    confirmationDestination,
+    routeInfo,
+    setDockContent,
+    setDockOpen,
+    // Remove circular dependencies
+  ]);
+  
 
   useEffect(() => {
     if (shouldShowConfirmation && confirmationDestination) {
@@ -768,6 +981,67 @@ export default function IndoorNavigation({
   }, [initRouteLayer, updateRouteColors]);
 
   useEffect(() => {
+    // Only update when navigation is active
+    if (isNavigationActive && latestPath.current.length > 0) {
+      console.log("Floor changed during active navigation - updating path visualization");
+      
+      // Force route to update with floor change
+      if (map.current && map.current.getSource('route')) {
+        const features = generateRouteFeatures(latestPath.current, currentFloor, isEmergency);
+        (map.current.getSource('route') as mapboxgl.GeoJSONSource).setData({
+          type: 'FeatureCollection',
+          features
+        });
+        
+        if (map.current.getLayer('route')) {
+          map.current.setLayoutProperty('route', 'visibility', 'visible');
+        }
+        
+        // Ensure destination marker is still visible when changing floors
+        if (confirmationDestination?.coordinates) {
+          // Only add marker if we're on the destination floor
+          if (confirmationDestination.coordinates.floor.toLowerCase() === currentFloor.toLowerCase()) {
+            addDestinationMarker(confirmationDestination.coordinates);
+          }
+        }
+        
+        console.log(`Updated route with ${features.length} segments for floor ${currentFloor}`);
+      }
+      
+      // Update dock with appropriate UI
+      if (isEmergency) {
+        // For emergency routes, show emergency info
+        setDockContent(
+          <div className="bg-red-100 p-4 rounded-lg text-red-800 flex flex-col items-center">
+            <h3 className="text-xl font-bold mb-2">EMERGENCY EVACUATION</h3>
+            <p className="mb-4">Follow the red route to the nearest exit</p>
+            <button 
+              onClick={() => {
+                if (cancelNavigationRef.current) cancelNavigationRef.current();
+              }}
+              className="bg-red-600 text-white py-2 px-4 rounded-lg"
+            >
+              Cancel Emergency
+            </button>
+          </div>
+        );
+      } else if (confirmationDestination) {
+        // For normal navigation, update the dock with cancel button
+        updateDockWithCancelButton();
+      }
+    }
+  }, [
+    currentFloor, 
+    isNavigationActive, 
+    isEmergency, 
+    confirmationDestination,
+    setDockContent,
+    updateDockWithCancelButton,
+    generateRouteFeatures,
+    addDestinationMarker,
+  ]);
+
+  useEffect(() => {
     if (!map.current) return;
     
     console.log(`Floor changed to: ${currentFloor} - Updating map layers`);
@@ -778,8 +1052,6 @@ export default function IndoorNavigation({
         return;
       }
       
-      cleanupAnimation(); 
-      
       try {
         if (map.current.getLayer('wallsFill')) {
           map.current.setFilter('wallsFill', ['==', ['get', 'floor'], currentFloor]);
@@ -789,7 +1061,11 @@ export default function IndoorNavigation({
           map.current.setFilter('wallsOutline', ['==', ['get', 'floor'], currentFloor]);
         }
         
-        updateRouteColors();
+        // Force route color update when floor changes if we have a path
+        if (latestPath.current.length > 0) {
+          console.log(`Updating route colors for floor change to ${currentFloor}`);
+          updateRouteColors();
+        }
         
         console.log(`Applied floor filter: '${currentFloor}'`);
       } catch (error) {
@@ -798,14 +1074,16 @@ export default function IndoorNavigation({
     };
     
     updateVisuals();
-  }, [currentFloor, cleanupAnimation, updateRouteColors]);
+  }, [currentFloor, updateRouteColors]);
 
   return (
     <div className="relative top-0 w-full h-screen">
       <div ref={mapContainer} className="w-full h-full" />
-      {isAnimating && <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-primary text-white px-4 py-2 rounded-full">
-        Navigating...
-      </div>}
+      {isAnimating && (
+        <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-primary text-white px-4 py-2 rounded-full">
+          Navigating...
+        </div>
+      )}
     </div>
   );
-};
+}

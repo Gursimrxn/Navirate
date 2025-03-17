@@ -15,7 +15,7 @@ export const FloorSwitcher: React.FC<FloorSwitcherProps> = ({
   const floors = ['2', '1', 'G']; // Add all floors your building has
 
   return (
-    <div className={`flex flex-col bg-white rounded-full p-1 gap-2 shadow-lg z-50 ${className}`}>
+    <div className={`flex flex-col bg-white rounded-full border-2 border-[#00000020] p-1 gap-2 shadow-lg z-[1000] ${className}`}>
       {floors.map((floor) => (
         <motion.button
           key={floor}
