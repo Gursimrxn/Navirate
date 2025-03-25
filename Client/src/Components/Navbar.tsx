@@ -236,8 +236,9 @@ export const Navbar = ({ onClose, className }: NavbarProps) => {
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.95 }}
         transition={{ duration: 0.1 }}
-        className="flex justify-center items-center bg-gradient-to-r from-[#FFC9C980] to-[#FFC9C9] w-[45px] h-[45px] rounded-full cursor-pointer flex-shrink-0"
+        className='flex justify-center items-center w-[45px] h-[45px] rounded-full cursor-pointer flex-shrink-0'
         style={{
+          background: 'var(--emergency-background)',
           backdropFilter: "blur(8px)",
           WebkitBackdropFilter: "blur(8px)"
         }}
@@ -246,14 +247,18 @@ export const Navbar = ({ onClose, className }: NavbarProps) => {
           <path d="M12.2759 11.4187L10.0815 12.2173V16.4674H7.68317V10.5314H7.70118L14.019 8.23196C14.3116 8.11933 14.6291 8.06305 14.956 8.07406C16.2888 8.10683 17.4592 8.9805 17.8663 10.2561C18.0897 10.9563 18.2936 11.4289 18.4777 11.6737C19.5717 13.1283 21.3123 14.069 23.2726 14.069V16.4674C20.6648 16.4674 18.3347 15.2782 16.7951 13.4126L16.0979 17.3664L18.4759 19.6692V28.4593H16.0775V21.2812L13.62 18.8983L12.4835 24.0526L4.2168 22.595L4.63326 20.233L10.5381 21.2742L12.2759 11.4187ZM16.6771 7.47351C15.3525 7.47351 14.2787 6.39972 14.2787 5.07513C14.2787 3.75055 15.3525 2.67676 16.6771 2.67676C18.0017 2.67676 19.0755 3.75055 19.0755 5.07513C19.0755 6.39972 18.0017 7.47351 16.6771 7.47351Z" fill="#FF0000"/>
         </svg>
       </motion.div>
-      {showText && <p className="text-[0.6rem] text-[#FF0000]">Emergency Exit</p>}
+      {showText && <p style={{ color: 'var(--emergency-color)', fontSize: '0.6rem' }}>Emergency Exit</p>}
     </div>
   );
 
   return (
     <div className={`fixed z-20 mt-12 w-full ${className || ''}`}>
       <motion.div
-      className={`max-w-lg w-[90%] flex justify-between mx-auto ${navState === "navigating" ? "rounded-3xl" : "rounded-full"} shadow-2xl px-3 p-2 bg-white`}
+      className={`max-w-lg w-[90%] flex justify-between mx-auto ${navState === "navigating" ? "rounded-3xl" : "rounded-full"} shadow-2xl px-3 p-2`}
+      style={{
+        backgroundColor: 'var(--background)',
+        color: 'var(--foreground)'
+      }}
       initial={{ y: -10, opacity: 0 }}
       animate={{ y: 0, opacity: 1, height: navState === "navigating" ? "auto" : "auto" }}
       transition={{ duration: 0.5, type: "spring" }}
@@ -262,6 +267,7 @@ export const Navbar = ({ onClose, className }: NavbarProps) => {
         // First navigation state - animating/calculating route
         <motion.div 
         className="flex items-center gap-2 justify-between w-full" 
+        style={{ color: 'var(--foreground)' }}
         initial={{ opacity: 0 }} 
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
@@ -288,6 +294,7 @@ export const Navbar = ({ onClose, className }: NavbarProps) => {
         // Second navigation state - active navigation with instructions
         <motion.div 
           className="flex flex-col w-full justify-center"
+          style={{ color: 'var(--foreground)' }}
           initial={{ opacity: 0}}
           animate={{ opacity: 1, height: 90 }}
           exit={{ opacity: 0 }}
@@ -296,7 +303,7 @@ export const Navbar = ({ onClose, className }: NavbarProps) => {
           <div className="flex items-center justify-between w-full">
             <div className="flex-1">
               <div className="flex items-center gap-2">
-                <div className="flex items-center justify-center transition-colors ease rounded-xl bg-green-500 min-w-12 h-12">
+                <div className="flex items-center justify-center transition-colors ease rounded-xl min-w-12 h-12" style={{ backgroundColor: 'var(--primary)' }}>
                   <svg width="13" height="22" viewBox="0 0 13 22" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <path d="M5.43634 20.8576C5.43635 21.4624 5.92664 21.9527 6.53147 21.9528C7.13635 21.9528 7.62672 21.4624 7.62672 20.8576V7.07269H11.1423C12.0332 7.07269 12.4794 5.99555 11.8495 5.36559L7.23858 0.754714C6.84806 0.36419 6.2149 0.364188 5.82437 0.75471L1.21347 5.36558C0.583501 5.99555 1.02967 7.07269 1.92057 7.07269H5.43624L5.43634 20.8576Z" fill="white"/>
                   </svg>
@@ -309,7 +316,6 @@ export const Navbar = ({ onClose, className }: NavbarProps) => {
               </div>
             </div>
             <div className="flex items-center">
-              {/* Removed cancel button */}
               <EmergencyButton showText={true} />
             </div>
           </div>
@@ -317,7 +323,7 @@ export const Navbar = ({ onClose, className }: NavbarProps) => {
           
       ) : (
         // Default state - showing destinations
-        <div className="flex items-center justify-between w-full">
+        <div className="flex items-center justify-between w-full" style={{ color: 'var(--foreground)' }}>
           <motion.div 
           className="flex items-center gap-2 overflow-x-auto whitespace-nowrap pr-2 scrollbar-hide flex-1"
           style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
@@ -328,12 +334,15 @@ export const Navbar = ({ onClose, className }: NavbarProps) => {
           key="destinations">
           <style>{`
             .scrollbar-hide::-webkit-scrollbar {
-            display: none;
+              display: none;
+            }
+            .destination-item:hover {
+              background-color: var(--hover-background);
             }
           `}</style>
           {isLoading ? (
             <div className="flex items-center justify-center p-2">
-            <svg className="animate-spin h-5 w-5 text-gray-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <svg className="animate-spin h-5 w-5" style={{ color: 'var(--muted-foreground)' }} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
               <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
             </svg>
@@ -345,7 +354,7 @@ export const Navbar = ({ onClose, className }: NavbarProps) => {
               key={dest.id}
               whileTap={{ scale: 0.98 }}
               transition={{ duration: 0.1 }}
-              className="flex items-center justify-center transition-colors ease rounded-full py-2 px-2 gap-1 cursor-pointer hover:bg-black/15 flex-shrink-0"
+              className="flex items-center justify-center transition-colors ease rounded-full py-2 px-2 gap-1 cursor-pointer flex-shrink-0 destination-item"
               onClick={() => handleDestinationSelect(dest)}
             >
               {getIconForDestination(dest.name)}
